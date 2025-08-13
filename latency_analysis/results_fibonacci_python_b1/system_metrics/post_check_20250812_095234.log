@@ -1,0 +1,46 @@
+🔍 System State Checker
+======================
+
+📊 System Load:
+ 11:13:03 up 4 days,  1:45,  1 user,  load average: 12.81, 15.75, 16.06
+
+💾 Memory Usage:
+              total        used        free      shared  buff/cache   available
+Mem:           15Gi       5.8Gi       1.8Gi       8.0Mi       8.0Gi       9.4Gi
+Swap:            0B          0B          0B
+
+🖥️  Top CPU Processes:
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root     1175052 50.0  0.1  37648 20488 ?        RNs  Aug08 2892:02 /lib/systemd/systemd-udevd
+65532    2673918 29.8  0.2 1252508 35312 ?       Ssl  09:52  23:54 /ko-app/queue
+65532    3073139 17.7  0.7 1411264 130852 ?      Ssl  10:51   3:49 /ko-app/activator
+root     1175084 16.9  0.6 133044 113544 ?       RN   Aug08 979:47 /lib/systemd/systemd-udevd
+root     2673831 16.2  0.3 1685028 55180 ?       Ssl  09:52  12:59 python /app/server.py --addr=0.0.0.0 --port=50051
+root     1175075 14.7  0.6 127588 108028 ?       SN   Aug08 851:57 /lib/systemd/systemd-udevd
+root     2235720 13.9  3.3 1838508 547920 ?      Ssl  Aug10 460:03 kube-apiserver --advertise-address=146.169.43.24 --allow-privileged=true --authorization-mode=Node,RBAC --client-ca-file=/etc/kubernetes/pki/ca.crt --enable-admission-plugins=NodeRestriction --enable-bootstrap-token-auth=true --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key --etcd-servers=https://127.0.0.1:2379 --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key --requestheader-allowed-names=front-proxy-client --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --requestheader-extra-headers-prefix=X-Remote-Extra- --requestheader-group-headers=X-Remote-Group --requestheader-username-headers=X-Remote-User --secure-port=6443 --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --tls-cert-file=/etc/kubernetes/pki/apiserver.crt --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+root        4984 11.2  0.3 44242524 50176 ?      Sl   Aug08 657:20 calico-node -felix
+root     2673761 10.4  0.1 1238520 17048 ?       Ssl  09:52   8:22 /app/server --addr=0.0.0.0:50000 --function-endpoint-url=0.0.0.0 --function-endpoint-port=50051 --function-name=fibonacci-python --value=10 --generator=linear --lowerBound=1 --upperBound=10
+
+☸️  Kubernetes Pods:
+NAMESPACE         NAME                   READY   STATUS      RESTARTS   AGE
+knative-serving   default-domain-99ddx   0/1     Completed   0          27d
+
+📈 Node Resources:
+NAME             CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+cloud-vm-43-24   2748m        45%      9073Mi          57%         
+
+⚠️  High CPU Processes (>50%):
+
+🔧 systemd-udevd Processes:
+Count: 29
+❌ TOO MANY UDEVD PROCESSES - Need to fix
+
+🎯 Load Analysis:
+Current load: 12.81
+❌ HIGH LOAD DETECTED - Consider restarting system
+
+🎯 Memory Analysis:
+Available memory: 9GB
+✅ Memory is sufficient
+
+✅ System check complete!

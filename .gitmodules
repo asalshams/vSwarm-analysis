@@ -1,0 +1,4 @@
+[submodule "external/vswarm"]
+	path = external/vswarm
+	url = git@github.com:asalshams/vSwarm.git
+	branch = work-code-only

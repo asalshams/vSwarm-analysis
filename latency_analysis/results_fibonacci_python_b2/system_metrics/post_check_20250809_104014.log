@@ -1,0 +1,46 @@
+🔍 System State Checker
+======================
+
+📊 System Load:
+ 12:02:17 up 1 day,  2:34,  1 user,  load average: 9.17, 15.36, 17.43
+
+💾 Memory Usage:
+              total        used        free      shared  buff/cache   available
+Mem:           15Gi       4.0Gi       3.8Gi       8.0Mi       7.8Gi        11Gi
+Swap:            0B          0B          0B
+
+🖥️  Top CPU Processes:
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+65532     605709 26.2  0.2 1252508 37172 ?       Ssl  10:34  23:09 /ko-app/queue
+root     1175084 22.3  0.6 133044 113540 ?       R    Aug08 338:04 /lib/systemd/systemd-udevd
+root     1175075 20.5  0.6 127472 108000 ?       S    Aug08 309:45 /lib/systemd/systemd-udevd
+root     1175052 16.7  0.1  37124 19916 ?        Rs   Aug08 252:19 /lib/systemd/systemd-udevd
+65532    1318005 16.2  0.6 1411328 106212 ?      Ssl  11:35   4:16 /ko-app/activator
+root      605642 14.2  0.3 1685092 55492 ?       Ssl  10:34  12:35 python /app/server.py --addr=0.0.0.0 --port=50051
+root        1519 13.9  3.1 1769112 521848 ?      Ssl  Aug08 222:29 kube-apiserver --advertise-address=146.169.43.24 --allow-privileged=true --authorization-mode=Node,RBAC --client-ca-file=/etc/kubernetes/pki/ca.crt --enable-admission-plugins=NodeRestriction --enable-bootstrap-token-auth=true --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key --etcd-servers=https://127.0.0.1:2379 --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key --requestheader-allowed-names=front-proxy-client --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --requestheader-extra-headers-prefix=X-Remote-Extra- --requestheader-group-headers=X-Remote-Group --requestheader-username-headers=X-Remote-User --secure-port=6443 --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --tls-cert-file=/etc/kubernetes/pki/apiserver.crt --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+as3824    569647 13.5  1.6 76658380 275084 ?     Sl   10:31  12:15 /home/as3824/.cursor-server/bin/a8e95743c5268be73767c46944a71f4465d05c90/node --dns-result-order=ipv4first /home/as3824/.cursor-server/bin/a8e95743c5268be73767c46944a71f4465d05c90/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+65532    4089821 13.1  0.8 1754236 144276 ?      Ssl  09:41  18:25 /ko-app/activator
+
+☸️  Kubernetes Pods:
+NAMESPACE         NAME                   READY   STATUS      RESTARTS   AGE
+knative-serving   default-domain-99ddx   0/1     Completed   0          24d
+
+📈 Node Resources:
+NAME             CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+cloud-vm-43-24   3175m        52%      7038Mi          44%         
+
+⚠️  High CPU Processes (>50%):
+
+🔧 systemd-udevd Processes:
+Count: 29
+❌ TOO MANY UDEVD PROCESSES - Need to fix
+
+🎯 Load Analysis:
+Current load: 8.76
+❌ HIGH LOAD DETECTED - Consider restarting system
+
+🎯 Memory Analysis:
+Available memory: 11GB
+✅ Memory is sufficient
+
+✅ System check complete!
