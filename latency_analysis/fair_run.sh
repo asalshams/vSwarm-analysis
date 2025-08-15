@@ -155,8 +155,8 @@ if [[ ${PRE_WAIT} -eq 1 ]]; then
 fi
 
 # Tools checks (best-effort)
-command -v mpstat >/dev/null 2>&1 || echo "⚠️ mpstat not found (install sysstat)"
-command -v iostat >/dev/null 2>&1 || echo "⚠️ iostat not found (install sysstat)"
+command -v mpstat >/dev/null 2>&1 || echo " mpstat not found (install sysstat)"
+command -v iostat >/dev/null 2>&1 || echo " iostat not found (install sysstat)"
 
 # Start background telemetry
 MPSTAT_OUT="${METRICS_DIR}/mpstat_${TS}.log"
@@ -213,7 +213,7 @@ fi
 if [[ -x ./check_system_state.sh ]]; then
   ./check_system_state.sh > "${METRICS_DIR}/post_check_${TS}.log" 2>&1 || true
 else
-  echo "⚠️ check_system_state.sh not found; skipping snapshot" | tee -a "${METRICS_DIR}/post_check_${TS}.log" >/dev/null
+  echo " check_system_state.sh not found; skipping snapshot" | tee -a "${METRICS_DIR}/post_check_${TS}.log" >/dev/null
 fi
 
 echo "Telemetry saved to: ${METRICS_DIR}"
