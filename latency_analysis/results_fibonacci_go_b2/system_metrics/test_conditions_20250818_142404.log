@@ -1,0 +1,18 @@
+=== Fair Test Conditions ===
+Timestamp: 2025-08-18T14:24:42+01:00
+Title: fibonacci_go_b2
+Service: fibonacci-go-b2
+Scheduling: Native OS
+Load Threshold: 4.8
+Pre-test Load: 2.29
+Expected Pods: 2
+System State:
+  CPU Cores: 6
+  Available Memory: 10Gi
+  System Load: 2.29
+
+=== Post-Test Validation ===
+Test Completion: 2025-08-18T15:44:44+01:00
+Test Return Code: 0
+Final Pod Count: 2
+Final System Load: 20.38

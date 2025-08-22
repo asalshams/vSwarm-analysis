@@ -15,21 +15,21 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # =============================================================================
-# CONFIGURATION - Edit these values to customize your tests
+# COMPREHENSIVE TEST RUNNER FOR VSWARM WITH POD MONITORING
 # =============================================================================
 
-RPS_VALUES = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 460, 480, 500]
-# Duration for all tests (in seconds)
-TEST_DURATION = 60
-# Number of iterations per RPS level
-ITERATIONS_PER_RPS = 3
-
 class ComprehensiveTestRunner:
+    # Default test configuration
+    DEFAULT_RPS_VALUES = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 460, 480, 500]
+    DEFAULT_TEST_DURATION = 60
+    DEFAULT_ITERATIONS_PER_RPS = 3
+    
     def __init__(self, title, invoker_dir="../tools/invoker", service_name=None, namespace="default"):
         self.title = title
-        self.rps_values = RPS_VALUES
-        self.durations = [TEST_DURATION] * len(RPS_VALUES)  # Same duration for all tests
-        self.iterations_per_rps = ITERATIONS_PER_RPS
+        self.rps_values = self.DEFAULT_RPS_VALUES
+        self.test_duration = self.DEFAULT_TEST_DURATION
+        self.iterations_per_rps = self.DEFAULT_ITERATIONS_PER_RPS
+        self.durations = [self.test_duration] * len(self.rps_values)
         self.invoker_dir = invoker_dir
         self.results_dir = f"results_{title}"
         self.stats_file = os.path.join(self.results_dir, f"{title}_statistics.csv")
@@ -38,13 +38,6 @@ class ComprehensiveTestRunner:
         self.monitoring_running = False
         self.monitoring_file = None
         
-        # Dynamic load threshold based on available CPUs (nproc)
-        try:
-            available_cpus = os.cpu_count() or 1
-        except Exception:
-            available_cpus = 1
-        self.load_threshold = max(1.0, 0.8 * available_cpus)
-        
         # Create a test-specific directory inside invoker dir for raw files
         self.raw_files_dir = os.path.join(self.invoker_dir, f"raw_files_{title}")
         os.makedirs(self.raw_files_dir, exist_ok=True)
@@ -52,7 +45,7 @@ class ComprehensiveTestRunner:
         print(f"=== Comprehensive Test Runner ===")
         print(f"Test Title: {title}")
         print(f"RPS Values: {self.rps_values}")
-        print(f"Duration: {TEST_DURATION} seconds (all tests)")
+        print(f"Duration: {self.test_duration} seconds (all tests)")
         print(f"Iterations per RPS: {self.iterations_per_rps}")
         print(f"Total Tests: {len(self.rps_values) * self.iterations_per_rps}")
         print(f"Results Directory: {self.results_dir}")
@@ -104,21 +97,50 @@ class ComprehensiveTestRunner:
             print(f" Failed to build invoker: {e}")
             sys.exit(1)
     
+    def parse_latency_filename(self, filename):
+        """Parse latency filename and extract RPS values and iteration info.
+        
+        Returns:
+            dict: Contains target_rps, actual_rps, iteration (if available), or None if parsing fails
+        """
+        # Try new format with iteration: target_rps{R}_iter{II}_rps{A}_lat.csv
+        match = re.search(r'target_rps(\d+\.?\d*)_iter(\d+)_rps(\d+\.?\d*)_lat\.csv', filename)
+        if match:
+            return {
+                'target_rps': float(match.group(1)),
+                'iteration': int(match.group(2)),
+                'actual_rps': float(match.group(3)),
+                'has_iteration': True
+            }
+        
+        # Try old format: target_rps{R}_actual_rps{A}_lat.csv
+        match = re.search(r'target_rps(\d+\.?\d*)_actual_rps(\d+\.?\d*)_lat\.csv', filename)
+        if match:
+            return {
+                'target_rps': float(match.group(1)),
+                'actual_rps': float(match.group(2)),
+                'iteration': 1,
+                'has_iteration': False
+            }
+        
+        return None
+
     def get_latency_files(self):
         """Get all latency files in the invoker directory."""
         files = glob.glob(os.path.join(self.invoker_dir, "target_rps*_actual_rps*_lat.csv"))
         rps_files = {}
         for f in files:
             filename = os.path.basename(f)
-            match = re.search(r'target_rps(\d+\.?\d*)_actual_rps(\d+\.?\d*)_lat\.csv', filename)
-            if match:
-                target_rps = float(match.group(1))
+            parsed = self.parse_latency_filename(filename)
+            if parsed:
+                target_rps = parsed['target_rps']
                 if target_rps not in rps_files:
                     rps_files[target_rps] = []
                 rps_files[target_rps].append({
                     'path': f,
                     'filename': filename,
-                    'mtime': os.path.getmtime(f)
+                    'mtime': os.path.getmtime(f),
+                    'parsed': parsed
                 })
         return rps_files
 
@@ -286,7 +308,7 @@ class ComprehensiveTestRunner:
                 latency_data = self.load_latency_data(latency_file)
                 if latency_data is not None:
                     filename = os.path.basename(latency_file)
-                    stats = self.calculate_statistics(latency_data, TEST_DURATION, filename)
+                    stats = self.calculate_statistics(latency_data, self.test_duration, filename)
                     if stats:
                         iteration_stats.append(stats)
                         # Store data for visualization
@@ -316,7 +338,7 @@ class ComprehensiveTestRunner:
         detailed_stats = []
         for filename, data in all_data.items():
             if data is not None:
-                stats = self.calculate_statistics(data, TEST_DURATION, filename)
+                stats = self.calculate_statistics(data, self.test_duration, filename)
                 if stats:
                     stats['filename'] = filename
                     detailed_stats.append(stats)
@@ -406,7 +428,7 @@ class ComprehensiveTestRunner:
         # Initialize averaged stats with the first iteration's structure
         averaged_stats = {
             'rps': rps,
-            'duration': TEST_DURATION,
+            'duration': self.test_duration,
             'test_title': self.title,
             'iterations': len(iteration_stats)
         }
@@ -588,33 +610,6 @@ class ComprehensiveTestRunner:
             print(f" Failed to create resource evolution charts: {e}")
             return False
 
-    def archive_existing_files(self):
-        """Archive existing latency files from previous runs."""
-        print("\n--- Archiving Previous Test Files ---")
-        
-        # Find all existing latency files
-        existing_files = glob.glob(os.path.join(self.invoker_dir, "target_rps*_actual_rps*_lat.csv"))
-        if not existing_files:
-            print("No previous test files found.")
-            return
-        
-        # Create timestamped archive folder
-        archive_timestamp = time.strftime("%Y%m%d_%H%M%S")
-        archive_folder = os.path.join(self.archive_dir, f"archived_{archive_timestamp}")
-        os.makedirs(archive_folder, exist_ok=True)
-        
-        # Move files to archive
-        for file in existing_files:
-            filename = os.path.basename(file)
-            dest = os.path.join(archive_folder, filename)
-            try:
-                shutil.move(file, dest)
-                print(f" Archived: {filename}")
-            except Exception as e:
-                print(f" Failed to archive {filename}: {e}")
-        
-        print(f" Files archived to: {archive_folder}")
-        print(f" Total files archived: {len(existing_files)}")
 
     def start_monitoring(self):
         """Start pod monitoring in background."""
@@ -650,13 +645,35 @@ class ComprehensiveTestRunner:
         with open(self.monitoring_file, 'w') as f:
             f.write("timestamp,pod_count,cpu_usage_millicores,memory_usage_mib\n")
         
-        # Determine a working label selector for this Knative service (once)
+        # Determine current revision for more precise pod monitoring
         self.label_selector = None
-        selector_candidates = [
-            f"serving.knative.dev/service={self.service_name}",
-            f"app={self.service_name}",
-            f"serving.knative.dev/configuration={self.service_name}"
-        ]
+        self.current_revision = None
+        
+        # First get the current revision
+        try:
+            result = subprocess.run([
+                'kubectl', 'get', 'ksvc', self.service_name, '-n', self.namespace,
+                '-o', 'jsonpath={.status.latestReadyRevisionName}'
+            ], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                self.current_revision = result.stdout.strip()
+        except Exception:
+            pass
+        
+        # Build selector to target only current revision pods
+        if self.current_revision:
+            selector_candidates = [
+                f"serving.knative.dev/revision={self.current_revision}",
+                f"serving.knative.dev/service={self.service_name},serving.knative.dev/revision={self.current_revision}",
+            ]
+        else:
+            # Fallback to service-level selectors
+            selector_candidates = [
+                f"serving.knative.dev/service={self.service_name}",
+                f"app={self.service_name}",
+                f"serving.knative.dev/configuration={self.service_name}"
+            ]
+            
         for sel in selector_candidates:
             probe = subprocess.run([
                 'kubectl', 'get', 'pods', '-n', self.namespace,
@@ -667,7 +684,7 @@ class ComprehensiveTestRunner:
                 break
         if not self.label_selector:
             # Fall back to the most probable Knative label
-            self.label_selector = selector_candidates[0]
+            self.label_selector = f"serving.knative.dev/service={self.service_name}"
         
         while self.monitoring_running:
             try:
@@ -797,6 +814,72 @@ class ComprehensiveTestRunner:
             print(f" Failed to convert monitoring data: {e}")
             return None
 
+    def _run_test_execution_phase(self):
+        """Execute all invoker tests with iterations."""
+        print(f"\n--- Running {len(self.rps_values) * self.iterations_per_rps} Invoker Tests ---")
+        
+        for rps, duration in zip(self.rps_values, self.durations):
+            print(f"\n{'='*50}")
+            print(f"Testing RPS {rps} ({self.iterations_per_rps} iterations)")
+            print(f"{'='*50}")
+            
+            for iteration in range(1, self.iterations_per_rps + 1):
+                if not self.run_invoker_test(rps, duration, iteration):
+                    print(f" Test failed for RPS {rps}, iteration {iteration}")
+                    return False
+                time.sleep(2)  # Small delay between iterations
+            
+            print(f" Completed all {self.iterations_per_rps} iterations for RPS {rps}")
+            time.sleep(5)  # Longer delay between RPS levels
+        
+        return True
+
+    def _run_analysis_phase(self):
+        """Run analysis and visualization phase."""
+        # Copy latency files
+        latency_files, rps_files_map = self.copy_latency_files()
+        if not latency_files:
+            print(" No latency files found")
+            return False, None
+        
+        # Generate statistics
+        stats = self.generate_statistics(latency_files, rps_files_map)
+        if not stats:
+            print(" Failed to generate statistics")
+            return False, None
+        
+        # Create visualizations
+        if latency_files:
+            if not self.create_visualizations(latency_files):
+                print(" Failed to create visualizations")
+                # Don't return False here, as the statistics are still useful
+            
+            # Create resource evolution charts
+            if self.service_name:
+                self.create_resource_evolution_charts(latency_files)
+        else:
+            print("  No latency files available for visualizations")
+        
+        return True, latency_files
+
+    def _print_pipeline_summary(self, latency_files):
+        """Print summary of pipeline execution."""
+        print(f"\n Pipeline completed!")
+        print(f" Statistics: {self.stats_file}")
+        print(f" Results: {self.results_dir}")
+        
+        if latency_files:
+            print(f" Charts: {self.results_dir}/charts")
+            if self.service_name:
+                print(f" Resource Evolution Charts: {self.results_dir}/charts/resource_evolution_comprehensive.png")
+                print(f" Resource vs Latency Correlation: {self.results_dir}/charts/resource_vs_latency_correlation.png")
+        else:
+            print(f"  No charts generated (no latency files available)")
+        
+        if self.service_name:
+            monitoring_file = os.path.join(self.results_dir, f"{self.title}_pod_monitoring.csv")
+            print(f" Pod Monitoring: {monitoring_file}")
+
     def run_complete_pipeline(self, skip_tests=False):
         """Run the complete test pipeline with optional pod monitoring."""
         print("Starting comprehensive test pipeline...")
@@ -815,22 +898,10 @@ class ComprehensiveTestRunner:
             monitoring_started = self.start_monitoring()
         
         try:
+            # Step 4: Execute tests or skip
             if not skip_tests:
-                # Step 4: Run all invoker tests with iterations
-                print(f"\n--- Running {len(self.rps_values) * self.iterations_per_rps} Invoker Tests ---")
-                for rps, duration in zip(self.rps_values, self.durations):
-                    print(f"\n{'='*50}")
-                    print(f"Testing RPS {rps} ({self.iterations_per_rps} iterations)")
-                    print(f"{'='*50}")
-                    
-                    for iteration in range(1, self.iterations_per_rps + 1):
-                        if not self.run_invoker_test(rps, duration, iteration):
-                            print(f" Test failed for RPS {rps}, iteration {iteration}")
-                            return False
-                        time.sleep(2)  # Small delay between iterations
-                    
-                    print(f" Completed all {self.iterations_per_rps} iterations for RPS {rps}")
-                    time.sleep(5)  # Longer delay between RPS levels
+                if not self._run_test_execution_phase():
+                    return False
             else:
                 print("\n--- Skipping invoker tests, using existing files ---")
         finally:
@@ -838,64 +909,13 @@ class ComprehensiveTestRunner:
             if monitoring_started:
                 self.stop_monitoring()
         
-        # Step 5: Copy latency files
-        latency_files, rps_files_map = self.copy_latency_files()
-        if not latency_files:
-            print(" No latency files found")
+        # Step 5-7: Analysis and visualization
+        success, latency_files = self._run_analysis_phase()
+        if not success:
             return False
         
-        # Step 6: Generate statistics
-        stats = self.generate_statistics(latency_files, rps_files_map)
-        if not stats:
-            print(" Failed to generate statistics")
-            return False
-        
-        # Step 7: Create visualizations
-        if latency_files:  # Only try to create visualizations if we have files
-            if not self.create_visualizations(latency_files):
-                print(" Failed to create visualizations")
-                # Don't return False here, as the statistics are still useful
-            
-            # Step 7b: Create resource evolution charts (NEW!)
-            if self.service_name:
-                self.create_resource_evolution_charts(latency_files)
-        else:
-            print("  No latency files available for visualizations")
-        
-        print(f"\n Pipeline completed!")
-        print(f" Statistics: {self.stats_file}")
-        print(f" Results: {self.results_dir}")
-        if latency_files:
-            print(f" Charts: {self.results_dir}/charts")
-            if self.service_name:
-                print(f" Resource Evolution Charts: {self.results_dir}/charts/resource_evolution_comprehensive.png")
-                print(f" Resource vs Latency Correlation: {self.results_dir}/charts/resource_vs_latency_correlation.png")
-        else:
-            print(f"  No charts generated (no latency files available)")
-        
-        if self.service_name:
-            monitoring_file = os.path.join(self.results_dir, f"{self.title}_pod_monitoring.csv")
-            print(f" Pod Monitoring: {monitoring_file}")
-        
-        # System health check after test completion
-        print(f"\n{'='*60}")
-        print(f" POST-TEST SYSTEM HEALTH CHECK")
-        print(f"{'='*60}")
-        
-        system_healthy = self.check_system_health_after_test()
-        
-        if system_healthy:
-            print(f"\n SYSTEM HEALTHY - Safe to continue with next test")
-            print(f" You can proceed to your next configuration/runtime test")
-        else:
-            print(f"\n  SYSTEM ISSUES DETECTED - Consider waiting before next test")
-            print(f" Recommended actions:")
-            print(f"   - Wait 2-3 minutes for system to stabilize")
-            print(f"   - Run: ./check_system_state.sh")
-            print(f"   - If udevd processes > 5: sudo pkill -f systemd-udevd && sudo systemctl restart systemd-udevd")
-            print(f"   - If load > {self.load_threshold:.2f}: Wait longer or consider system restart")
-        
-        print(f"{'='*60}")
+        # Step 8: Print summary
+        self._print_pipeline_summary(latency_files)
         
         return True
 
@@ -1204,74 +1224,7 @@ class ComprehensiveTestRunner:
             print(f" Failed to create percentile charts: {e}")
             return False
     
-    def check_system_health_after_test(self):
-        """Check system health after test completion and provide recommendations."""
-        try:
-            # Check system load
-            load = os.getloadavg()[0]
-            load_threshold = getattr(self, 'load_threshold', 4.0)
-            
-            # Check udevd processes
-            result = subprocess.run(['pgrep', '-c', 'systemd-udevd'], 
-                                  capture_output=True, text=True)
-            udevd_count = int(result.stdout.strip())
-            
-            # Check available memory
-            result = subprocess.run(['free', '-g'], capture_output=True, text=True)
-            lines = result.stdout.strip().split('\n')
-            mem_line = lines[1].split()
-            available_gb = float(mem_line[6])
-            
-            # Check high CPU processes
-            result = subprocess.run(['ps', 'aux', '--sort=-%cpu'], capture_output=True, text=True)
-            lines = result.stdout.strip().split('\n')[1:6]  # Skip header, get top 5
-            high_cpu_processes = []
-            for line in lines:
-                parts = line.split()
-                if len(parts) >= 3:
-                    cpu_percent = float(parts[2])
-                    process_name = ' '.join(parts[10:])
-                    if cpu_percent > 50:
-                        high_cpu_processes.append((cpu_percent, process_name))
-            
-            # Print system status
-            print(f" System Load: {load:.2f}")
-            print(f" udevd Processes: {udevd_count}")
-            print(f" Available Memory: {available_gb:.1f}GB")
-            
-            if high_cpu_processes:
-                print(f"  High CPU Processes:")
-                for cpu, process in high_cpu_processes[:3]:  # Show top 3
-                    print(f"   - {process}: {cpu:.1f}%")
-            
-            # Determine if system is healthy
-            issues = []
-            
-            if load > load_threshold:
-                issues.append(f"High system load ({load:.2f} > {load_threshold:.2f})")
-            
-            if udevd_count > 5:
-                issues.append(f"Too many udevd processes ({udevd_count})")
-            
-            if available_gb < 8.0:
-                issues.append(f"Low available memory ({available_gb:.1f}GB)")
-            
-            if high_cpu_processes and high_cpu_processes[0][0] > 80:
-                issues.append(f"Very high CPU process ({high_cpu_processes[0][1]}: {high_cpu_processes[0][0]:.1f}%)")
-            
-            if issues:
-                print(f"\n System Issues Detected:")
-                for issue in issues:
-                    print(f"   - {issue}")
-                return False
-            else:
-                print(f"\n✅ All system metrics are within normal ranges")
-                return True
-                
-        except Exception as e:
-            print(f" Error checking system health: {e}")
-            print(f"  Unable to determine system health - proceed with caution")
-            return False
+
 
 
 def parse_arguments():

@@ -1,0 +1,18 @@
+=== Fair Test Conditions ===
+Timestamp: 2025-08-17T16:04:46+01:00
+Title: fibonacci_nodejs_b1
+Service: fibonacci-nodejs-b1
+Scheduling: Native OS
+Load Threshold: 4.8
+Pre-test Load: 1.41
+Expected Pods: 1
+System State:
+  CPU Cores: 6
+  Available Memory: 12Gi
+  System Load: 1.41
+
+=== Post-Test Validation ===
+Test Completion: 2025-08-17T17:24:48+01:00
+Test Return Code: 0
+Final Pod Count: 1
+Final System Load: 16.29

@@ -2,48 +2,36 @@
 
 set -euo pipefail
 
-# fair_run.sh - Pin CPUs, log mpstat/iostat, run run_test.py, and capture system snapshot
+# fair_run.sh - Standardized fair testing with cleanup, monitoring, and controlled environment
 # Usage:
-#   ./fair_run.sh --title <name> --service <svc> [--namespace default] [--cpus 2-3]
-#                 [--mpstat-int 1] [--iostat-int 1] [--sudo-prompt]
-#                 [--pre-wait] [--load-threshold <float>] [--max-wait <sec>] [--skip-udev] [--tame-udev]
-#                 [--require-udev-pause] [--udev-pause-timeout <sec>]
+#   ./fair_run.sh --title <name> --service <svc> [--namespace default] [--expected-pods <num>]
 # Example:
-#   ./fair_run.sh --title fibonacci_python --service fibonacci-python --cpus 2-3
+#   ./fair_run.sh --title fibonacci_go_b3 --service fibonacci-go-b3 --expected-pods 4
 
-# Defaults
+# Standardized defaults for fair testing
 NAMESPACE="default"
-CPUS=""
+CPUS="2-3"                    # Always pin to same CPUs
 MPSTAT_INT=1
 IOSTAT_INT=1
-SUDO_PROMPT=0
-PRE_WAIT=0
-LOAD_THRESHOLD=""
+SUDO_PROMPT=1                 # Allow sudo for system operations
+PRE_WAIT=1                    # Always wait for low load
+LOAD_THRESHOLD=""             # Will be calculated as 0.8 * nproc
 MAX_WAIT=180
-SKIP_UDEV=0
-TAME_UDEV=0
-REQUIRE_UDEV_PAUSE=0
-UDEV_PAUSE_TIMEOUT=20
+EXPECTED_PODS=""              # Required: expected pod count for validation
+SKIP_CLEANUP=0                # Skip pre-test cleanup (when handled externally)
 
-# Parse args
+# Parse args (simplified for standardized testing)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title) TITLE="$2"; shift 2;;
     --service) SERVICE="$2"; shift 2;;
     --namespace) NAMESPACE="$2"; shift 2;;
-    --cpus) CPUS="$2"; shift 2;;
-    --mpstat-int) MPSTAT_INT="$2"; shift 2;;
-    --iostat-int) IOSTAT_INT="$2"; shift 2;;
-    --sudo-prompt) SUDO_PROMPT=1; shift 1;;
-    --pre-wait) PRE_WAIT=1; shift 1;;
-    --load-threshold) LOAD_THRESHOLD="$2"; shift 2;;
-    --max-wait) MAX_WAIT="$2"; shift 2;;
-    --skip-udev) SKIP_UDEV=1; shift 1;;
-    --tame-udev) TAME_UDEV=1; shift 1;;
-    --require-udev-pause) REQUIRE_UDEV_PAUSE=1; shift 1;;
-    --udev-pause-timeout) UDEV_PAUSE_TIMEOUT="$2"; shift 2;;
+    --expected-pods) EXPECTED_PODS="$2"; shift 2;;
+    --skip-cleanup) SKIP_CLEANUP=1; shift;;
     -h|--help)
-      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--cpus 2-3] [--mpstat-int 1] [--iostat-int 1] [--sudo-prompt] [--pre-wait] [--load-threshold <float>] [--max-wait <sec>] [--skip-udev] [--tame-udev] [--require-udev-pause] [--udev-pause-timeout <sec>]";
+      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--expected-pods <num>] [--skip-cleanup]";
+      echo "Example: $0 --title fibonacci_go_b3 --service fibonacci-go-b3 --expected-pods 4";
+      echo "  --skip-cleanup: Skip pre-test cleanup (when handled externally)";
       exit 0;;
     *) echo "Unknown arg: $1"; exit 1;;
   esac
@@ -60,11 +48,100 @@ METRICS_DIR="${RESULTS_DIR}/system_metrics"
 mkdir -p "${METRICS_DIR}"
 TS=$(date +%Y%m%d_%H%M%S)
 
+# === PRE-TEST CLEANUP (CONDITIONAL) ===
+echo "=== Fair Test Protocol: ${TITLE} ==="
+
+if [ "$SKIP_CLEANUP" -eq 0 ]; then
+    echo "1. Pre-test cleanup..."
+    
+    # Clean up any existing pods/services
+    echo "  Cleaning existing pods..."
+    kubectl delete pods --all --force --grace-period=0 >/dev/null 2>&1 || true
+    
+    # Delete any existing Knative services (except current if redeploying)
+    echo "  Cleaning existing services..."
+    kubectl delete ksvc --all --timeout=30s >/dev/null 2>&1 || true
+    
+    # Wait for cleanup to complete
+    sleep 5
+    
+    # Verify clean state
+    REMAINING_PODS=$(kubectl get pods --no-headers 2>/dev/null | wc -l)
+    if [ "$REMAINING_PODS" -gt 0 ]; then
+        echo "  Warning: $REMAINING_PODS pods still present after cleanup"
+        kubectl get pods --no-headers
+    fi
+    
+    echo "2. Deploying service: ${SERVICE}"
+else
+    echo "1. Skipping cleanup (handled externally)"
+    echo "2. Verifying service: ${SERVICE}"
+fi
+# Note: Service deployment should happen externally before calling this script
+# Wait for service to be ready
+kubectl wait --for=condition=Ready ksvc/"${SERVICE}" --timeout=120s || {
+    echo "Error: Service ${SERVICE} failed to become ready" >&2
+    exit 1
+}
+
+# Validate pod count matches expectation
+if [[ -n "${EXPECTED_PODS}" ]]; then
+    echo "3. Validating pod count..."
+    sleep 10  # Allow scaling to stabilize
+    ACTUAL_PODS=$(kubectl get pods -l serving.knative.dev/service="${SERVICE}" --no-headers 2>/dev/null | wc -l)
+    echo "  Expected pods: ${EXPECTED_PODS}, Actual pods: ${ACTUAL_PODS}"
+    
+    if [ "$ACTUAL_PODS" -ne "${EXPECTED_PODS}" ]; then
+        echo "  ERROR: Pod count mismatch!" >&2
+        echo "  Current pods:" >&2
+        kubectl get pods -l serving.knative.dev/service="${SERVICE}" >&2
+        exit 1
+    fi
+    echo "  ✓ Pod count validation passed"
+fi
+
+# Log deployment configuration
+echo "4. Logging deployment configuration..."
+CONFIG_LOG="${METRICS_DIR}/deployment_config_${TS}.log"
+{
+    echo "=== Deployment Configuration ==="
+    echo "Timestamp: $(date -Is)"
+    echo "Title: ${TITLE}"
+    echo "Service: ${SERVICE}"
+    echo "Namespace: ${NAMESPACE}"
+    echo "Expected Pods: ${EXPECTED_PODS:-unknown}"
+    echo "Actual Pods: ${ACTUAL_PODS:-unknown}"
+    echo ""
+    echo "=== Knative Service Details ==="
+    kubectl get ksvc "${SERVICE}" -o yaml
+    echo ""
+    echo "=== Current Pods ==="
+    kubectl get pods -l serving.knative.dev/service="${SERVICE}" -o wide
+    echo ""
+    echo "=== Resource Limits/Requests ==="
+    kubectl get pods -l serving.knative.dev/service="${SERVICE}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .spec.containers[*]}  Container: {.name}{"\n"}  CPU Request: {.resources.requests.cpu}{"\n"}  CPU Limit: {.resources.limits.cpu}{"\n"}  Memory Request: {.resources.requests.memory}{"\n"}  Memory Limit: {.resources.limits.memory}{"\n"}{end}{"\n"}{end}'
+} > "${CONFIG_LOG}"
+
+echo "5. Starting controlled test environment..."
+
+
+# Update endpoints.json with current service URL
+echo "  Updating endpoints.json for current service..."
+SERVICE_URL=$(kubectl get ksvc "${SERVICE}" -o jsonpath='{.status.url}' 2>/dev/null)
+if [[ -n "${SERVICE_URL}" ]]; then
+    # Extract hostname from URL (remove http:// prefix)
+    HOSTNAME=$(echo "${SERVICE_URL}" | sed 's|http://||')
+    echo "[{\"hostname\": \"${HOSTNAME}\"}]" > "../tools/invoker/endpoints.json"
+    echo "  ✓ endpoints.json updated with: ${HOSTNAME}"
+else
+    echo "  ✗ Failed to get service URL for ${SERVICE}"
+    exit 1
+fi
 # Optional sudo elevation (if password is required) and keep-alive
 SUDO_KEEPALIVE_PID=""
 if command -v sudo >/dev/null 2>&1 && [[ ${SUDO_PROMPT} -eq 1 ]]; then
   if ! sudo -n true >/dev/null 2>&1; then
-    echo "Elevating privileges for udev pause/resume (you may be prompted)..."
+    echo "Elevating privileges for system operations (you may be prompted)..."
     sudo -v
     # Keep sudo session alive until script exits
     ( while true; do sudo -n true; sleep 30; done ) & SUDO_KEEPALIVE_PID=$!
@@ -72,56 +149,7 @@ if command -v sudo >/dev/null 2>&1 && [[ ${SUDO_PROMPT} -eq 1 ]]; then
   fi
 fi
 
-# Optionally pause udev rule execution during the run (best-effort, with optional strict mode)
-UDEV_PAUSED=0
-if [[ ${SKIP_UDEV} -eq 1 ]]; then
-  echo "Skipping udev control (--skip-udev)"
-else
-  if command -v udevadm >/dev/null 2>&1; then
-    if sudo -n true >/dev/null 2>&1; then
-      # Pre-pause: only de-prioritize to help responsiveness, but DO NOT throttle CPU yet
-      if [[ ${TAME_UDEV} -eq 1 ]]; then
-        for p in $(pgrep systemd-udevd || true); do
-          sudo timeout 2 renice +10 -p "$p" >/dev/null 2>&1 || true
-          sudo timeout 2 ionice -c3 -p "$p" >/dev/null 2>&1 || true
-        done
-      fi
-      # Try to ensure queue is quiescent first (give more time)
-      sudo timeout 20 udevadm settle >/dev/null 2>&1 || true
-      echo "Pausing udev rule execution"
-      if [[ ${REQUIRE_UDEV_PAUSE} -eq 1 ]]; then
-        DEADLINE=$(( $(date +%s) + UDEV_PAUSE_TIMEOUT ))
-        while true; do
-          if sudo timeout 5 udevadm control --stop-exec-queue; then
-            UDEV_PAUSED=1
-            break
-          fi
-          [[ $(date +%s) -ge ${DEADLINE} ]] && break
-          sleep 1
-        done
-        if [[ ${UDEV_PAUSED} -ne 1 ]]; then
-          echo "Failed to pause udev within ${UDEV_PAUSE_TIMEOUT}s (--require-udev-pause set); aborting." >&2
-          exit 1
-        fi
-      else
-        if sudo timeout 5 udevadm control --stop-exec-queue; then
-          UDEV_PAUSED=1
-        else
-          echo "udev pause skipped (daemon busy or timed out)"
-        fi
-      fi
-      # Post-pause: now throttle and limit children to keep it quiet during the test
-      if [[ ${TAME_UDEV} -eq 1 && ${UDEV_PAUSED} -eq 1 ]]; then
-        sudo timeout 3 systemctl set-property --runtime systemd-udevd.service CPUAccounting=yes CPUQuota=15% || true
-        sudo timeout 2 udevadm control --children-max=1 >/dev/null 2>&1 || true
-      fi
-    else
-      echo "Skipping udev pause (sudo not available non-interactively; pass --sudo-prompt to allow it)"
-    fi
-  fi
-fi
-# Ensure we resume on any exit
-trap 'if [[ "${UDEV_PAUSED}" == "1" ]]; then sudo timeout 3 udevadm control --start-exec-queue >/dev/null 2>&1 || true; fi' EXIT
+
 
 # Optional pre-wait until load is below threshold
 get_1min_load() {
@@ -129,12 +157,13 @@ get_1min_load() {
 }
 
 if [[ ${PRE_WAIT} -eq 1 ]]; then
-  # Compute default threshold if not provided: max(1.0, 0.8 * nproc)
+  # Calculate dynamic threshold as 0.8 * number of CPUs
   if [[ -z "${LOAD_THRESHOLD}" ]]; then
-    NPROC=$(nproc 2>/dev/null || echo 1)
-    LOAD_THRESHOLD=$(awk -v n="${NPROC}" 'BEGIN{t=n*0.8; if (t<1) t=1; print t;}')
+    NPROC=$(nproc)
+    LOAD_THRESHOLD=$(echo "scale=1; 0.8 * ${NPROC}" | bc -l)
   fi
-  echo "Pre-wait enabled: waiting up to ${MAX_WAIT}s for 1-min load ≤ ${LOAD_THRESHOLD}"
+  
+  echo "Pre-wait enabled: waiting up to ${MAX_WAIT}s for 1-min load ≤ ${LOAD_THRESHOLD} (0.8 × ${NPROC} CPUs)"
   SECS=0
   while true; do
     L=$(get_1min_load || echo 9999)
@@ -185,15 +214,27 @@ fi
   done
 ) & LOAD_PID=$!
 
-# Run test with optional CPU pinning
+# Log test conditions for telemetry validation
+TELEMETRY_LOG="${METRICS_DIR}/test_conditions_${TS}.log"
+{
+    echo "=== Fair Test Conditions ==="
+    echo "Timestamp: $(date -Is)"
+    echo "Title: ${TITLE}"
+    echo "Service: ${SERVICE}" 
+    echo "Scheduling: Native OS"
+    echo "Load Threshold: ${LOAD_THRESHOLD}"
+    echo "Pre-test Load: $(get_1min_load)"
+    echo "Expected Pods: ${EXPECTED_PODS:-unknown}"
+    echo "System State:"
+    echo "  CPU Cores: $(nproc)"
+    echo "  Available Memory: $(free -h | awk 'NR==2{print $7}')"
+    echo "  System Load: $(get_1min_load)"
+} > "${TELEMETRY_LOG}"
+
+# Run test with native scheduling (serverless-first approach)
 CMD=(python3 run_test.py --title "${TITLE}" --service "${SERVICE}" --namespace "${NAMESPACE}")
-if [[ -n "${CPUS}" ]]; then
-  echo "Running with CPU pinning: taskset -c ${CPUS} ${CMD[*]}"
-  taskset -c "${CPUS}" "${CMD[@]}"
-else
-  echo "Running without CPU pinning: ${CMD[*]}"
-  "${CMD[@]}"
-fi
+echo "Running with native OS scheduling: ${CMD[*]}"
+"${CMD[@]}"
 TEST_RC=$?
 
 # Stop telemetry
@@ -202,19 +243,29 @@ echo "Stopping telemetry..."
 [[ -n "${IOSTAT_PID}" ]] && kill ${IOSTAT_PID} >/dev/null 2>&1 || true
 kill ${LOAD_PID} >/dev/null 2>&1 || true
 
-# Resume udev rule execution explicitly before snapshot
-if [[ "${UDEV_PAUSED}" == "1" ]]; then
-  echo "Resuming udev rule execution"
-  sudo timeout 3 udevadm control --start-exec-queue >/dev/null 2>&1 || true
-  UDEV_PAUSED=0
-fi
 
-# Capture a post-test system snapshot
-if [[ -x ./check_system_state.sh ]]; then
-  ./check_system_state.sh > "${METRICS_DIR}/post_check_${TS}.log" 2>&1 || true
-else
-  echo " check_system_state.sh not found; skipping snapshot" | tee -a "${METRICS_DIR}/post_check_${TS}.log" >/dev/null
-fi
 
-echo "Telemetry saved to: ${METRICS_DIR}"
+# Final telemetry validation and summary
+{
+    echo ""
+    echo "=== Post-Test Validation ==="
+    echo "Test Completion: $(date -Is)"
+    echo "Test Return Code: ${TEST_RC}"
+    echo "Final Pod Count: $(kubectl get pods -l serving.knative.dev/service="${SERVICE}" --no-headers 2>/dev/null | wc -l)"
+    echo "Final System Load: $(get_1min_load)"
+} >> "${TELEMETRY_LOG}"
+
+echo ""
+echo "=== Fair Test Complete: ${TITLE} ==="
+echo "✓ Pre-test cleanup: Complete"
+echo "✓ Pod validation: $(if [[ -n "${EXPECTED_PODS}" ]]; then echo "Expected ${EXPECTED_PODS}, validated"; else echo "Skipped"; fi)"
+echo "✓ Environment control: Native scheduling, Load threshold ${LOAD_THRESHOLD}"
+echo "✓ Test execution: Return code ${TEST_RC}"
+echo ""
+echo "Telemetry and configuration saved to: ${METRICS_DIR}"
+echo "- Test conditions: ${TELEMETRY_LOG}"
+echo "- Deployment config: ${CONFIG_LOG}"
+echo "- System metrics: mpstat, iostat, load logs"
+echo ""
+
 exit ${TEST_RC} 

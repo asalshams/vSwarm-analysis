@@ -4,6 +4,8 @@ from typing import Dict, List
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+import re
 
 
 RUN_DIRS: Dict[str, str] = {
@@ -78,6 +80,38 @@ def read_detailed_csvs(base_dir: str) -> pd.DataFrame:
     if not rows:
         raise FileNotFoundError("No detailed analysis CSVs found for B1–B5")
     return pd.concat(rows, ignore_index=True)
+
+
+def read_timeseries_data(base_dir: str) -> Dict[str, pd.DataFrame]:
+    """Read pod monitoring data for timeseries visualization."""
+    timeseries_data = {}
+    
+    for run, subdir in RUN_DIRS.items():
+        pod_csv_path = os.path.join(base_dir, subdir, "fibonacci_python_{run.lower()}_pod_monitoring.csv")
+        if not os.path.exists(pod_csv_path):
+            # Try alternative naming patterns
+            candidates = [
+                os.path.join(base_dir, subdir, f)
+                for f in os.listdir(os.path.join(base_dir, subdir))
+                if f.endswith("_pod_monitoring.csv")
+            ]
+            if candidates:
+                pod_csv_path = candidates[0]
+            else:
+                print(f"WARN: Missing pod monitoring CSV for {run} in {subdir}")
+                continue
+        
+        try:
+            df = pd.read_csv(pod_csv_path)
+            # Convert timestamp to datetime if needed
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+            timeseries_data[run] = df
+        except Exception as e:
+            print(f"WARN: Failed to read pod monitoring data for {run}: {e}")
+            continue
+    
+    return timeseries_data
 
 
 def aggregate_by_target(df: pd.DataFrame) -> pd.DataFrame:
@@ -231,6 +265,149 @@ def plot_heatmap(df_agg: pd.DataFrame, out_dir: str, value_col: str, title: str,
     print(f"Saved → {out_path}")
 
 
+def plot_timeseries_comparison(timeseries_data: Dict[str, pd.DataFrame], out_dir: str) -> None:
+    """Create timeseries comparison charts showing resource usage over time for all runs."""
+    if not timeseries_data:
+        print("WARN: No timeseries data available for comparison")
+        return
+    
+    # Plot CPU usage comparison
+    plt.figure(figsize=(14, 8))
+    sns.set_style("whitegrid")
+    
+    for run, data in timeseries_data.items():
+        if 'cpu_usage_millicores' in data.columns:
+            # Normalize time to 0-100% for comparison
+            time_normalized = np.linspace(0, 100, len(data))
+            plt.plot(time_normalized, data['cpu_usage_millicores'], 
+                    label=f"{run} | pods={RUN_CONFIG.get(run, {}).get('pods', '?')}", 
+                    linewidth=2, alpha=0.8)
+    
+    plt.title("CPU Usage Comparison Over Time (Fibonacci Python B1–B5)")
+    plt.xlabel("Test Progress (%)")
+    plt.ylabel("CPU Usage (millicores)")
+    plt.legend(loc="best", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    out_path = os.path.join(out_dir, "timeseries_cpu_comparison.png")
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+    print(f"Saved → {out_path}")
+    
+    # Plot Memory usage comparison
+    plt.figure(figsize=(14, 8))
+    sns.set_style("whitegrid")
+    
+    for run, data in timeseries_data.items():
+        if 'memory_usage_mib' in data.columns:
+            time_normalized = np.linspace(0, 100, len(data))
+            plt.plot(time_normalized, data['memory_usage_mib'], 
+                    label=f"{run} | pods={RUN_CONFIG.get(run, {}).get('pods', '?')}", 
+                    linewidth=2, alpha=0.8)
+    
+    plt.title("Memory Usage Comparison Over Time (Fibonacci Python B1–B5)")
+    plt.xlabel("Test Progress (%)")
+    plt.ylabel("Memory Usage (MiB)")
+    plt.legend(loc="best", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    out_path = os.path.join(out_dir, "timeseries_memory_comparison.png")
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+    print(f"Saved → {out_path}")
+    
+    # Plot Pod count comparison
+    plt.figure(figsize=(14, 8))
+    sns.set_style("whitegrid")
+    
+    for run, data in timeseries_data.items():
+        if 'pod_count' in data.columns:
+            time_normalized = np.linspace(0, 100, len(data))
+            plt.plot(time_normalized, data['pod_count'], 
+                    label=f"{run} | pods={RUN_CONFIG.get(run, {}).get('pods', '?')}", 
+                    linewidth=2, alpha=0.8, marker='o', markersize=4)
+    
+    plt.title("Pod Count Comparison Over Time (Fibonacci Python B1–B5)")
+    plt.xlabel("Test Progress (%)")
+    plt.ylabel("Pod Count")
+    plt.legend(loc="best", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    out_path = os.path.join(out_dir, "timeseries_pod_count_comparison.png")
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+    print(f"Saved → {out_path}")
+
+
+def plot_resource_efficiency(df_agg: pd.DataFrame, timeseries_data: Dict[str, pd.DataFrame], out_dir: str) -> None:
+    """Create charts showing resource efficiency vs performance."""
+    if not timeseries_data:
+        print("WARN: No timeseries data available for resource efficiency analysis")
+        return
+    
+    # Calculate average resource usage per run
+    resource_metrics = {}
+    for run, data in timeseries_data.items():
+        if 'cpu_usage_millicores' in data.columns and 'memory_usage_mib' in data.columns:
+            avg_cpu = data['cpu_usage_millicores'].mean()
+            avg_memory = data['memory_usage_mib'].mean()
+            resource_metrics[run] = {
+                'avg_cpu': avg_cpu,
+                'avg_memory': avg_memory
+            }
+    
+    # Plot CPU efficiency vs throughput
+    plt.figure(figsize=(12, 8))
+    sns.set_style("whitegrid")
+    
+    for run in df_agg['run'].unique():
+        run_data = df_agg[df_agg['run'] == run]
+        if run in resource_metrics:
+            avg_cpu = resource_metrics[run]['avg_cpu']
+            throughput = run_data['throughput_rps_mean'].mean()
+            plt.scatter(avg_cpu, throughput, s=100, alpha=0.7, 
+                       label=f"{run} | pods={RUN_CONFIG.get(run, {}).get('pods', '?')}")
+    
+    plt.xlabel("Average CPU Usage (millicores)")
+    plt.ylabel("Average Throughput (RPS)")
+    plt.title("CPU Efficiency vs Throughput (Fibonacci Python B1–B5)")
+    plt.legend(loc="best", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    out_path = os.path.join(out_dir, "resource_efficiency_cpu_vs_throughput.png")
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+    print(f"Saved → {out_path}")
+    
+    # Plot Memory efficiency vs throughput
+    plt.figure(figsize=(12, 8))
+    sns.set_style("whitegrid")
+    
+    for run in df_agg['run'].unique():
+        run_data = df_agg[df_agg['run'] == run]
+        if run in resource_metrics:
+            avg_memory = resource_metrics[run]['avg_memory']
+            throughput = run_data['throughput_rps_mean'].mean()
+            plt.scatter(avg_memory, throughput, s=100, alpha=0.7, 
+                       label=f"{run} | pods={RUN_CONFIG.get(run, {}).get('pods', '?')}")
+    
+    plt.xlabel("Average Memory Usage (MiB)")
+    plt.ylabel("Average Throughput (RPS)")
+    plt.title("Memory Efficiency vs Throughput (Fibonacci Python B1–B5)")
+    plt.legend(loc="best", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    out_path = os.path.join(out_dir, "resource_efficiency_memory_vs_throughput.png")
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+    print(f"Saved → {out_path}")
+
+
 def main() -> None:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     out_dir = ensure_output_dir(base_dir)
@@ -238,6 +415,9 @@ def main() -> None:
     raw = read_detailed_csvs(base_dir)
     agg = aggregate_by_target(raw)
     save_aggregated_csv(agg, out_dir)
+
+    # Read timeseries data for additional visualizations
+    timeseries_data = read_timeseries_data(base_dir)
 
     # Plots
     plot_efficiency(agg, out_dir)
@@ -248,6 +428,10 @@ def main() -> None:
     plot_heatmap(agg, out_dir, value_col="p99_mean", title="p99 latency (mean) heatmap", filename="heatmap_p99_mean.png")
     plot_heatmap(agg, out_dir, value_col="median_mean", title="Median latency (mean) heatmap", filename="heatmap_median_mean.png")
     plot_heatmap(agg, out_dir, value_col="throughput_rps_mean", title="Throughput (mean) heatmap", filename="heatmap_throughput_mean.png")
+    
+    # New timeseries visualizations
+    plot_timeseries_comparison(timeseries_data, out_dir)
+    plot_resource_efficiency(agg, timeseries_data, out_dir)
 
     print(f"All charts saved to: {out_dir}")
 
