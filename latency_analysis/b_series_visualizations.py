@@ -724,26 +724,70 @@ class BSeriesVisualizer:
             
             print(f"      Saved: {filename}")
             
-            # Also save a summary version with key metrics
+            # Also save a summary version with key metrics - FIXED to use individual iteration maximums
             summary_data = []
             for run in ["B1", "B2", "B3", "B4", "B5"]:
-                run_data = grouped[grouped['run'] == run]
-                if not run_data.empty:
-                    max_throughput = run_data['actual_rps'].max()
-                    max_throughput_idx = run_data['actual_rps'].idxmax()
-                    max_throughput_row = run_data.loc[max_throughput_idx]
-                    
-                    summary_data.append({
-                        'Configuration': run,
-                        'Pods': max_throughput_row['pods'],
-                        'CPU_per_Pod': max_throughput_row['container_cpu'],
-                        'Memory_per_Pod': max_throughput_row['container_mem'],
-                        'Max_Throughput_RPS': f"{max_throughput:.1f}",
-                        'Target_RPS_at_Max': f"{max_throughput_row['target_rps']:.0f}",
-                        'Avg_Latency_ms': f"{max_throughput_row.get('average_ms', max_throughput_row['average']/1000):.2f}",
-                        'P95_Latency_ms': f"{max_throughput_row.get('p95_ms', max_throughput_row['p95']/1000):.2f}",
-                        'P99_Latency_ms': f"{max_throughput_row.get('p99_ms', max_throughput_row['p99']/1000):.2f}"
-                    })
+                # Find the results directory for this run
+                run_dir = None
+                for item in os.listdir(self.base_dir):
+                    if item.startswith(f'results_fibonacci_{runtime}_') and item.endswith(f'_{run.lower()}'):
+                        run_dir = os.path.join(self.base_dir, item)
+                        break
+                
+                if run_dir and os.path.exists(run_dir):
+                    # Read the achieved_rps_summary.csv directly to get individual iteration maximums
+                    summary_file = os.path.join(run_dir, 'achieved_rps_summary.csv')
+                    if os.path.exists(summary_file):
+                        try:
+                            with open(summary_file, 'r') as f:
+                                lines = f.readlines()
+                            
+                            # Extract the "Overall Max" value from the summary section
+                            overall_max = None
+                            target_at_max = None
+                            
+                            for line in lines:
+                                if line.startswith('Overall Max'):
+                                    parts = line.strip().split(',')
+                                    if len(parts) >= 2:
+                                        overall_max = float(parts[1])
+                                        target_at_max = float(parts[2]) if len(parts) > 2 else None
+                                        break
+                            
+                            if overall_max is not None:
+                                # Get the corresponding row from grouped data for latency metrics
+                                run_data = grouped[grouped['run'] == run]
+                                if not run_data.empty:
+                                    # Find the row closest to the target RPS at max
+                                    if target_at_max is not None:
+                                        closest_idx = (run_data['target_rps'] - target_at_max).abs().idxmin()
+                                    else:
+                                        closest_idx = run_data['actual_rps'].idxmax()
+                                    
+                                    max_throughput_row = run_data.loc[closest_idx]
+                                    
+                                    summary_data.append({
+                                        'Configuration': run,
+                                        'Pods': max_throughput_row['pods'],
+                                        'CPU_per_Pod': max_throughput_row['container_cpu'],
+                                        'Memory_per_Pod': max_throughput_row['container_mem'],
+                                        'Max_Throughput_RPS': f"{overall_max:.1f}",
+                                        'Target_RPS_at_Max': f"{target_at_max:.0f}" if target_at_max else "N/A",
+                                        'Avg_Latency_ms': f"{max_throughput_row.get('average_ms', max_throughput_row['average']/1000):.2f}",
+                                        'P95_Latency_ms': f"{max_throughput_row.get('p95_ms', max_throughput_row['p95']/1000):.2f}",
+                                        'P99_Latency_ms': f"{max_throughput_row.get('p99_ms', max_throughput_row['p99']/1000):.2f}"
+                                    })
+                                else:
+                                    print(f"      Warning: No grouped data found for {run}")
+                            else:
+                                print(f"      Warning: Could not extract Overall Max from {summary_file}")
+                                
+                        except Exception as e:
+                            print(f"      Error reading {summary_file}: {e}")
+                    else:
+                        print(f"      Warning: {summary_file} not found")
+                else:
+                    print(f"      Warning: Results directory for {run} not found")
             
             if summary_data:
                 summary_df = pd.DataFrame(summary_data)
@@ -751,6 +795,8 @@ class BSeriesVisualizer:
                 summary_path = os.path.join(runtime_dir, summary_filename)
                 summary_df.to_csv(summary_path, index=False)
                 print(f"      Saved: {summary_filename}")
+            else:
+                print(f"      Warning: No summary data generated for {runtime}")
                 
         except Exception as e:
             print(f"      Error generating aggregated CSV: {e}")
