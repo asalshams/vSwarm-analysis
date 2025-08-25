@@ -1,0 +1,6 @@
+Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Target_RPS_at_Max,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
+B1,1,1000m,1Gi,367.8,368,2655.15,4809.43,6131.36
+B2,2,500m,500Mi,369.9,370,90.49,187.77,264.30
+B3,4,250m,250Mi,365.9,366,88.61,185.40,254.55
+B4,8,125m,125Mi,355.0,355,114.70,234.10,324.85
+B5,10,100m,100Mi,357.8,358,197.66,485.50,689.48
