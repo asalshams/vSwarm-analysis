@@ -62,6 +62,15 @@ RUN_CONFIG = {
     "B5": {"pods": "10", "container_cpu": "100m", "container_mem": "100Mi", "target_conc": "10"},
 }
 
+# Y-axis scaling factors and limits for enhanced detail
+Y_AXIS_SCALING = {
+    "throughput": 0.7,      # Scale down throughput charts
+    "latency": 500,         # Fixed 500ms max for latency charts
+    "cpu": 0.6,             # Scale down CPU charts
+    "memory": 0.7,          # Scale down memory charts
+    "pod_count": 0.9        # Scale down pod count charts
+}
+
 # =============================================================================
 # B-SERIES VISUALIZATION GENERATOR CLASS
 # =============================================================================
@@ -80,13 +89,14 @@ class BSeriesVisualizer:
             self.runtime_dirs[runtime] = runtime_dir
         
         print("=" * 60)
-        print("B-SERIES VISUALIZATIONS")
+        print("B-SERIES VISUALIZATIONS (ENHANCED DETAIL VIEW)")
         print("=" * 60)
         print(f"Base Directory: {base_dir}")
         print(f"Central charts: {self.output_dir}")
         print(f"Runtime charts: {', '.join([f'{runtime}_b_series' for runtime in RUNTIME_ORDER])}")
         print(f"Focus: Pod scaling strategy analysis (containerConcurrency=100)")
         print(f"Runtime Order: {' → '.join([RUNTIME_COLORS[r]['label'] for r in RUNTIME_ORDER])}")
+        print(f"Y-axis scaling: Enhanced detail visibility with lower values")
         print("=" * 60)
 
     # =========================================================================
@@ -193,10 +203,10 @@ class BSeriesVisualizer:
                     detailed_df = self.load_detailed_analysis_data(results_dir)
                     
                     if achieved_df is not None and detailed_df is not None:
-                        # Merge and aggregate
-                        merged = pd.merge(detailed_df, achieved_df[['target_rps', 'max_achieved']], 
+                        # Merge and aggregate - Use avg_achieved (typical performance across iterations)
+                        merged = pd.merge(detailed_df, achieved_df[['target_rps', 'avg_achieved']], 
                                         on='target_rps', how='left')
-                        merged['actual_rps'] = merged['max_achieved'].fillna(merged['throughput_rps'])
+                        merged['actual_rps'] = merged['avg_achieved'].fillna(merged['throughput_rps'])
                         merged['run'] = run_name
                         runtime_aggregated.append(merged)
                 
@@ -213,22 +223,49 @@ class BSeriesVisualizer:
         """Extract maximum throughput achieved by each runtime/config combination."""
         max_data = []
         
-        for runtime, df in all_runtime_data.items():
-            for run in ["B1", "B2", "B3", "B4", "B5"]:
-                run_data = df[df['run'] == run]
-                if not run_data.empty:
-                    max_throughput = run_data['actual_rps'].max()
-                    config = RUN_CONFIG[run]
+        # Need to go back to original directories to read "Avg of Max" from summary files
+        b_series_dirs = self.find_b_series_directories()
+        
+        for runtime in ["python", "nodejs", "go"]:
+            if runtime in b_series_dirs and b_series_dirs[runtime]:
+                for results_dir in b_series_dirs[runtime]:
+                    # Extract run name (B1, B2, etc.)
+                    run_name = os.path.basename(results_dir).split('_')[-1].upper()
                     
-                    max_data.append({
-                        'runtime': runtime,
-                        'run': run,
-                        'max_throughput': max_throughput,
-                        'pods': int(config['pods']),
-                        'cpu': config['container_cpu'],
-                        'memory': config['container_mem'],
-                        'target_conc': int(config['target_conc'])
-                    })
+                    # Read the "Avg of Max" from achieved_rps_summary.csv
+                    summary_file = os.path.join(results_dir, 'achieved_rps_summary.csv')
+                    if os.path.exists(summary_file):
+                        try:
+                            with open(summary_file, 'r') as f:
+                                lines = f.readlines()
+                            
+                            # Look for "Avg of Max" line
+                            avg_of_max = None
+                            for line in lines:
+                                if line.startswith('Avg of Max'):
+                                    parts = line.strip().split(',')
+                                    if len(parts) >= 2:
+                                        avg_of_max = float(parts[1])
+                                        break
+                            
+                            if avg_of_max is not None:
+                                config = RUN_CONFIG[run_name]
+                                max_data.append({
+                                    'runtime': runtime,
+                                    'run': run_name,
+                                    'max_throughput': avg_of_max,
+                                    'pods': int(config['pods']),
+                                    'cpu': config['container_cpu'],
+                                    'memory': config['container_mem'],
+                                    'target_conc': int(config['target_conc'])
+                                })
+                            else:
+                                print(f"Warning: Could not find 'Avg of Max' in {summary_file}")
+                                
+                        except Exception as e:
+                            print(f"Error reading {summary_file}: {e}")
+                    else:
+                        print(f"Warning: {summary_file} not found")
         
         return pd.DataFrame(max_data)
 
@@ -291,6 +328,11 @@ class BSeriesVisualizer:
         ax.legend(fontsize=11)
         ax.grid(True, alpha=0.3, axis='y')
         
+        # Set reasonable y-axis limit with some headroom
+        max_throughput = max_data['max_throughput'].max()
+        y_limit = max_throughput * 1.1  # 10% headroom
+        ax.set_ylim(0, y_limit)
+        
         plt.tight_layout()
         
         filename = "b_series_max_throughput_comparison.png"
@@ -352,6 +394,11 @@ class BSeriesVisualizer:
                 fontsize=9, verticalalignment='bottom', horizontalalignment='right',
                 bbox=dict(boxstyle="round,pad=0.5", facecolor="lightyellow", alpha=0.9))
         
+        # Apply lower y-axis scaling for enhanced detail
+        max_throughput = max_data['max_throughput'].max()
+        y_limit = max_throughput * Y_AXIS_SCALING['throughput']
+        ax.set_ylim(0, y_limit)
+        
         plt.tight_layout()
         
         filename = "b_series_scaling_efficiency_comparison.png"
@@ -402,6 +449,12 @@ class BSeriesVisualizer:
                 ax.set_xticks(config_indices)
                 ax.set_xticklabels(runs)
                 ax.grid(True, alpha=0.3, axis='y')
+                
+                # Apply lower y-axis scaling for enhanced detail
+                if throughputs:
+                    max_throughput = max(throughputs)
+                    y_limit = max_throughput * Y_AXIS_SCALING['throughput']
+                    ax.set_ylim(0, y_limit)
                 
                 # Calculate and show trend
                 if len(throughputs) >= 2:
@@ -494,10 +547,13 @@ class BSeriesVisualizer:
             
             ax.set_xlabel('Target RPS', fontsize=12, fontweight='bold')
             ax.set_ylabel(f'{metric_label} Latency (ms)', fontsize=12, fontweight='bold')
-            ax.set_title(f'{runtime_label} B-Series: {metric_label} Latency vs Target RPS\nPod Scaling Strategy Analysis', 
+            ax.set_title(f'{runtime_label} B-Series: {metric_label} Latency vs Target RPS\nPod Scaling Strategy Analysis - Enhanced Detail View', 
                         fontsize=14, fontweight='bold', pad=20)
             ax.legend(fontsize=9, loc='best')
             ax.grid(True, alpha=0.3)
+            
+            # Apply fixed 500ms y-axis limit for enhanced detail
+            ax.set_ylim(0, Y_AXIS_SCALING['latency'])
             
             plt.tight_layout()
             
@@ -534,10 +590,13 @@ class BSeriesVisualizer:
             
             ax.set_xlabel('Achieved Throughput (RPS)', fontsize=12, fontweight='bold')
             ax.set_ylabel(f'{metric_label} Latency (ms)', fontsize=12, fontweight='bold')
-            ax.set_title(f'{runtime_label} B-Series: {metric_label} Latency vs Achieved Throughput\nPod Scaling Strategy Analysis', 
+            ax.set_title(f'{runtime_label} B-Series: {metric_label} Latency vs Achieved Throughput\nPod Scaling Strategy Analysis - Enhanced Detail View', 
                         fontsize=14, fontweight='bold', pad=20)
             ax.legend(fontsize=9, loc='best')
             ax.grid(True, alpha=0.3)
+            
+            # Apply fixed 500ms y-axis limit for enhanced detail
+            ax.set_ylim(0, Y_AXIS_SCALING['latency'])
             
             plt.tight_layout()
             
@@ -604,10 +663,17 @@ class BSeriesVisualizer:
         
         ax.set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
         ax.set_ylabel('CPU Usage (millicores)', fontsize=12, fontweight='bold')
-        ax.set_title(f'{runtime_label} B-Series: CPU Usage Comparison Over Time\nPod Scaling Strategy Analysis', 
+        ax.set_title(f'{runtime_label} B-Series: CPU Usage Comparison Over Time\nPod Scaling Strategy Analysis - Enhanced Detail View', 
                     fontsize=14, fontweight='bold', pad=20)
         ax.legend(loc='best', fontsize=10)
         ax.grid(True, alpha=0.3)
+        
+        # Apply lower y-axis scaling for enhanced detail
+        if timeseries_data:
+            max_cpu = max([data['cpu_usage_millicores'].max() for data in timeseries_data.values() 
+                          if 'cpu_usage_millicores' in data.columns])
+            y_limit = max_cpu * Y_AXIS_SCALING['cpu']
+            ax.set_ylim(0, y_limit)
         
         plt.tight_layout()
         
@@ -632,10 +698,17 @@ class BSeriesVisualizer:
         
         ax.set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
         ax.set_ylabel('Memory Usage (MiB)', fontsize=12, fontweight='bold')
-        ax.set_title(f'{runtime_label} B-Series: Memory Usage Comparison Over Time\nPod Scaling Strategy Analysis', 
+        ax.set_title(f'{runtime_label} B-Series: Memory Usage Comparison Over Time\nPod Scaling Strategy Analysis - Enhanced Detail View', 
                     fontsize=14, fontweight='bold', pad=20)
         ax.legend(loc='best', fontsize=10)
         ax.grid(True, alpha=0.3)
+        
+        # Apply lower y-axis scaling for enhanced detail
+        if timeseries_data:
+            max_memory = max([data['memory_usage_mib'].max() for data in timeseries_data.values() 
+                             if 'memory_usage_mib' in data.columns])
+            y_limit = max_memory * Y_AXIS_SCALING['memory']
+            ax.set_ylim(0, y_limit)
         
         plt.tight_layout()
         
@@ -660,10 +733,17 @@ class BSeriesVisualizer:
         
         ax.set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
         ax.set_ylabel('Pod Count', fontsize=12, fontweight='bold')
-        ax.set_title(f'{runtime_label} B-Series: Pod Count Comparison Over Time\nPod Scaling Strategy Analysis', 
+        ax.set_title(f'{runtime_label} B-Series: Pod Count Comparison Over Time\nPod Scaling Strategy Analysis - Enhanced Detail View', 
                     fontsize=14, fontweight='bold', pad=20)
         ax.legend(loc='best', fontsize=10)
         ax.grid(True, alpha=0.3)
+        
+        # Apply lower y-axis scaling for enhanced detail
+        if timeseries_data:
+            max_pods = max([data['pod_count'].max() for data in timeseries_data.values() 
+                           if 'pod_count' in data.columns])
+            y_limit = max_pods * Y_AXIS_SCALING['pod_count']
+            ax.set_ylim(0, y_limit)
         
         plt.tight_layout()
         

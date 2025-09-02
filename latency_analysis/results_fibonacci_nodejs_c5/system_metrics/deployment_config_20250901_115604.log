@@ -1,0 +1,284 @@
+=== Deployment Configuration ===
+Timestamp: 2025-09-01T11:56:37+01:00
+Title: fibonacci_nodejs_c5
+Service: fibonacci-nodejs-c5
+Namespace: default
+Expected Pods: 10
+Actual Pods: 10
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-nodejs-c5","namespace":"default"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"10","autoscaling.knative.dev/minScale":"10","autoscaling.knative.dev/target":"20","serving.knative.dev/containerConcurrency":"20"}},"spec":{"containerConcurrency":20,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-nodejs","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"250m","memory":"512Mi"},"requests":{"cpu":"250m","memory":"512Mi"}}},{"args":["--addr=0.0.0.0","--port=50051"],"image":"docker.io/vhiveease/fibonacci-nodejs:latest","name":"fibonacci-nodejs","resources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"200m","memory":"200Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-09-01T10:55:36Z"
+  generation: 1
+  name: fibonacci-nodejs-c5
+  namespace: default
+  resourceVersion: "27321551"
+  uid: 72085917-11bd-4346-bd74-9b95bfebdd38
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: "10"
+        autoscaling.knative.dev/target: "20"
+        serving.knative.dev/containerConcurrency: "20"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 20
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-nodejs
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+      - args:
+        - --addr=0.0.0.0
+        - --port=50051
+        image: docker.io/vhiveease/fibonacci-nodejs:latest
+        name: fibonacci-nodejs
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 200m
+            memory: 200Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-nodejs-c5.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-09-01T10:56:26Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-09-01T10:56:27Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-09-01T10:56:27Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-nodejs-c5-00001
+  latestReadyRevisionName: fibonacci-nodejs-c5-00001
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-nodejs-c5-00001
+  url: http://fibonacci-nodejs-c5.default.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                   READY   STATUS    RESTARTS   AGE   IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-4j5wj   0/3     Pending   0          60s   <none>           <none>           <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-7ts7t   3/3     Running   0          60s   192.168.64.242   cloud-vm-43-24   <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-d5xcq   0/3     Pending   0          60s   <none>           <none>           <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-l7l7d   0/3     Pending   0          60s   <none>           <none>           <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-thv5z   3/3     Running   0          61s   192.168.64.226   cloud-vm-43-24   <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-w4zrn   0/3     Pending   0          60s   <none>           <none>           <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-w54tq   3/3     Running   0          60s   192.168.64.252   cloud-vm-43-24   <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-xdnjq   3/3     Running   0          60s   192.168.64.249   cloud-vm-43-24   <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-xf4h4   3/3     Running   0          60s   192.168.64.230   cloud-vm-43-24   <none>           <none>
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-zkv4z   3/3     Running   0          60s   192.168.64.239   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-4j5wj
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-7ts7t
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-d5xcq
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-l7l7d
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-thv5z
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-w4zrn
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-w54tq
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-xdnjq
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-xf4h4
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+
+fibonacci-nodejs-c5-00001-deployment-c4bcbfd7d-zkv4z
+  Container: relay
+  CPU Request: 250m
+  CPU Limit: 250m
+  Memory Request: 512Mi
+  Memory Limit: 512Mi
+  Container: fibonacci-nodejs
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+

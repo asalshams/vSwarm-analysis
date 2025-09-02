@@ -21,6 +21,7 @@ EXPECTED_PODS=""              # Required: expected pod count for validation
 SKIP_CLEANUP=0                # Skip pre-test cleanup (when handled externally)
 
 # Parse args (simplified for standardized testing)
+SKIP_VISUALIZATIONS=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title) TITLE="$2"; shift 2;;
@@ -28,10 +29,12 @@ while [[ $# -gt 0 ]]; do
     --namespace) NAMESPACE="$2"; shift 2;;
     --expected-pods) EXPECTED_PODS="$2"; shift 2;;
     --skip-cleanup) SKIP_CLEANUP=1; shift;;
+    --skip-visualizations) SKIP_VISUALIZATIONS=1; shift;;
     -h|--help)
-      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--expected-pods <num>] [--skip-cleanup]";
+      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--expected-pods <num>] [--skip-cleanup] [--skip-visualizations]";
       echo "Example: $0 --title fibonacci_go_b3 --service fibonacci-go-b3 --expected-pods 4";
       echo "  --skip-cleanup: Skip pre-test cleanup (when handled externally)";
+      echo "  --skip-visualizations: Skip generating visualization charts";
       exit 0;;
     *) echo "Unknown arg: $1"; exit 1;;
   esac
@@ -233,6 +236,9 @@ TELEMETRY_LOG="${METRICS_DIR}/test_conditions_${TS}.log"
 
 # Run test with native scheduling (serverless-first approach)
 CMD=(python3 run_test.py --title "${TITLE}" --service "${SERVICE}" --namespace "${NAMESPACE}")
+if [ "$SKIP_VISUALIZATIONS" -eq 1 ]; then
+    CMD+=(--skip-visualizations)
+fi
 echo "Running with native OS scheduling: ${CMD[*]}"
 "${CMD[@]}"
 TEST_RC=$?

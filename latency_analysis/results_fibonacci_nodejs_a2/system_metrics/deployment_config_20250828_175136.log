@@ -1,0 +1,122 @@
+=== Deployment Configuration ===
+Timestamp: 2025-08-28T17:51:46+01:00
+Title: fibonacci_nodejs_a2
+Service: fibonacci-nodejs-a2
+Namespace: default
+Expected Pods: 1
+Actual Pods: 1
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-nodejs-a2","namespace":"default"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"1","autoscaling.knative.dev/minScale":"1","autoscaling.knative.dev/target":"1","serving.knative.dev/containerConcurrency":"1"}},"spec":{"containerConcurrency":1,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-nodejs","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"125m","memory":"256Mi"},"requests":{"cpu":"125m","memory":"256Mi"}}},{"args":["--addr=0.0.0.0","--port=50051"],"image":"docker.io/vhiveease/fibonacci-nodejs:latest","name":"fibonacci-nodejs","resources":{"limits":{"cpu":"500m","memory":"500Mi"},"requests":{"cpu":"500m","memory":"500Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-08-28T16:41:21Z"
+  generation: 1
+  name: fibonacci-nodejs-a2
+  namespace: default
+  resourceVersion: "25155714"
+  uid: ebe0aef8-46f5-4f30-9528-d56568765a28
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "1"
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/target: "1"
+        serving.knative.dev/containerConcurrency: "1"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 1
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-nodejs
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 125m
+            memory: 256Mi
+          requests:
+            cpu: 125m
+            memory: 256Mi
+      - args:
+        - --addr=0.0.0.0
+        - --port=50051
+        image: docker.io/vhiveease/fibonacci-nodejs:latest
+        name: fibonacci-nodejs
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 500m
+            memory: 500Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-nodejs-a2.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-08-28T16:46:10Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-08-28T16:46:11Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-08-28T16:46:11Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-nodejs-a2-00001
+  latestReadyRevisionName: fibonacci-nodejs-a2-00001
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-nodejs-a2-00001
+  url: http://fibonacci-nodejs-a2.default.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                   READY   STATUS    RESTARTS   AGE   IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-nodejs-a2-00001-deployment-f59bc7f57-2fgtn   3/3     Running   0          10m   192.168.64.233   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-nodejs-a2-00001-deployment-f59bc7f57-2fgtn
+  Container: relay
+  CPU Request: 125m
+  CPU Limit: 125m
+  Memory Request: 256Mi
+  Memory Limit: 256Mi
+  Container: fibonacci-nodejs
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 
+  Memory Request: 
+  Memory Limit: 
+

@@ -24,7 +24,7 @@ class ComprehensiveTestRunner:
     DEFAULT_TEST_DURATION = 60
     DEFAULT_ITERATIONS_PER_RPS = 3
     
-    def __init__(self, title, invoker_dir="../tools/invoker", service_name=None, namespace="default"):
+    def __init__(self, title, invoker_dir="../tools/invoker", service_name=None, namespace="default", skip_visualizations=False):
         self.title = title
         self.rps_values = self.DEFAULT_RPS_VALUES
         self.test_duration = self.DEFAULT_TEST_DURATION
@@ -37,6 +37,7 @@ class ComprehensiveTestRunner:
         self.namespace = namespace
         self.monitoring_running = False
         self.monitoring_file = None
+        self.skip_visualizations = skip_visualizations
         
         # Create a test-specific directory inside invoker dir for raw files
         self.raw_files_dir = os.path.join(self.invoker_dir, f"raw_files_{title}")
@@ -53,6 +54,10 @@ class ComprehensiveTestRunner:
         print(f"Raw Files Directory: {self.raw_files_dir}")
         if service_name:
             print(f"Pod Monitoring: {service_name} (namespace: {namespace})")
+        if self.skip_visualizations:
+            print(f"Visualizations: DISABLED (--skip-visualizations flag used)")
+        else:
+            print(f"Visualizations: ENABLED")
         print("=" * 50)
     
     def check_prerequisites(self):
@@ -76,15 +81,23 @@ class ComprehensiveTestRunner:
         else:
             print(" endpoints.json found")
         
-        # Check if matplotlib and seaborn are available
-        try:
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            print(" matplotlib and seaborn found")
-        except ImportError as e:
-            print(f" Required visualization libraries not found: {e}")
-            print("Install with: pip install matplotlib seaborn")
+        # Update endpoints.json with current service if service_name is provided
+        if not self.update_endpoints_json():
+            print(" Failed to update endpoints.json")
             return False
+        
+        # Check if matplotlib and seaborn are available (only if visualizations are enabled)
+        if not self.skip_visualizations:
+            try:
+                import matplotlib.pyplot as plt
+                import seaborn as sns
+                print(" matplotlib and seaborn found")
+            except ImportError as e:
+                print(f" Required visualization libraries not found: {e}")
+                print("Install with: pip install matplotlib seaborn")
+                return False
+        else:
+            print(" matplotlib and seaborn check skipped (visualizations disabled)")
         
         return True
     
@@ -96,6 +109,52 @@ class ComprehensiveTestRunner:
         except subprocess.CalledProcessError as e:
             print(f" Failed to build invoker: {e}")
             sys.exit(1)
+    
+    def update_endpoints_json(self):
+        """Update endpoints.json with the current service URL if service_name is provided."""
+        if not self.service_name:
+            print(" No service name provided, skipping endpoints.json update")
+            return True
+        
+        print(f" Updating endpoints.json for service: {self.service_name}")
+        try:
+            # Get the service URL from kubectl
+            cmd = [
+                "kubectl", "get", "ksvc", self.service_name, 
+                "-n", self.namespace, 
+                "-o", "jsonpath={.status.url}"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            service_url = result.stdout.strip()
+            
+            if not service_url:
+                print(f" Failed to get service URL for {self.service_name}")
+                return False
+            
+            # Extract hostname from URL (remove http:// prefix)
+            hostname = service_url.replace("http://", "")
+            print(f" Service URL: {service_url}")
+            print(f" Hostname: {hostname}")
+            
+            # Create endpoints.json content
+            endpoints_data = [{"hostname": hostname}]
+            endpoints_json = json.dumps(endpoints_data, indent=2)
+            
+            # Write to endpoints.json
+            endpoints_path = os.path.join(self.invoker_dir, "endpoints.json")
+            with open(endpoints_path, 'w') as f:
+                f.write(endpoints_json)
+            
+            print(f" ✓ endpoints.json updated with: {hostname}")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f" Failed to get service URL: {e}")
+            print(f"Error output: {e.stderr}")
+            return False
+        except Exception as e:
+            print(f" Failed to update endpoints.json: {e}")
+            return False
     
     def parse_latency_filename(self, filename):
         """Parse latency filename and extract RPS values and iteration info.
@@ -153,14 +212,15 @@ class ComprehensiveTestRunner:
             "./invoker",
             "-time", str(duration),
             "-rps", str(rps),
-            "-port", "80"
+            "-port", "50000"
         ]
         
         print(f"Command: {' '.join(cmd)}")
         
         # Run the invoker from the invoker directory
         try:
-            result = subprocess.run(cmd, cwd=self.invoker_dir, capture_output=True, text=True, check=True)
+            print(" Running invoker (output will be shown below):")
+            result = subprocess.run(cmd, cwd=self.invoker_dir, check=True)
             print(" Test completed successfully")
             
             # Find the newly generated latency file
@@ -848,8 +908,8 @@ class ComprehensiveTestRunner:
             print(" Failed to generate statistics")
             return False, None
         
-        # Create visualizations
-        if latency_files:
+        # Create visualizations (unless skipped)
+        if latency_files and not self.skip_visualizations:
             if not self.create_visualizations(latency_files):
                 print(" Failed to create visualizations")
                 # Don't return False here, as the statistics are still useful
@@ -857,6 +917,8 @@ class ComprehensiveTestRunner:
             # Create resource evolution charts
             if self.service_name:
                 self.create_resource_evolution_charts(latency_files)
+        elif self.skip_visualizations:
+            print("  Skipping visualization generation (--skip-visualizations flag used)")
         else:
             print("  No latency files available for visualizations")
         
@@ -868,11 +930,13 @@ class ComprehensiveTestRunner:
         print(f" Statistics: {self.stats_file}")
         print(f" Results: {self.results_dir}")
         
-        if latency_files:
+        if latency_files and not self.skip_visualizations:
             print(f" Charts: {self.results_dir}/charts")
             if self.service_name:
                 print(f" Resource Evolution Charts: {self.results_dir}/charts/resource_evolution_comprehensive.png")
                 print(f" Resource vs Latency Correlation: {self.results_dir}/charts/resource_vs_latency_correlation.png")
+        elif self.skip_visualizations:
+            print(f"  Charts: Skipped (--skip-visualizations flag used)")
         else:
             print(f"  No charts generated (no latency files available)")
         
@@ -1235,18 +1299,19 @@ def parse_arguments():
     parser.add_argument('--skip-tests', action='store_true', help='Skip running invoker tests and just do analysis')
     parser.add_argument('--service', '-s', help='Kubernetes service name to monitor (enables pod monitoring)')
     parser.add_argument('--namespace', '-n', default='default', help='Kubernetes namespace (default: default)')
+    parser.add_argument('--skip-visualizations', action='store_true', help='Skip generating visualization charts')
     
     args = parser.parse_args()
-    return args.title, args.invoker_dir, args.skip_tests, args.service, args.namespace
+    return args.title, args.invoker_dir, args.skip_tests, args.service, args.namespace, args.skip_visualizations
 
 
 def main():
     """Main function."""
     try:
-        title, invoker_dir, skip_tests, service_name, namespace = parse_arguments()
+        title, invoker_dir, skip_tests, service_name, namespace, skip_visualizations = parse_arguments()
         
         # Create and run the test runner
-        runner = ComprehensiveTestRunner(title, invoker_dir, service_name, namespace)
+        runner = ComprehensiveTestRunner(title, invoker_dir, service_name, namespace, skip_visualizations)
         success = runner.run_complete_pipeline(skip_tests)
         
         if success:

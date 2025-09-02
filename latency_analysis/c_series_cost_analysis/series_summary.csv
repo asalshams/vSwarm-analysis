@@ -1,0 +1,8 @@
+,,runtime,num_pods,total_vcpu,total_memory,instance_cost_per_1k,instance_cost_per_1k,request_cost_per_1k,request_cost_per_1k,percent_savings
+,,count,first,first,first,mean,std,mean,std,mean
+series,config,,,,,,,,,
+C,C1,15,1,2.0,2.0,0.000182,0.000122,0.001198,0.000606,-980.418424
+C,C2,15,2,2.0,2.0,0.000181,0.000122,0.000618,6.6e-05,-390.131024
+C,C3,15,4,2.0,2.0,0.000182,0.000122,0.000517,3.9e-05,-300.716619
+C,C4,15,8,2.0,2.0,0.000183,0.000121,0.000462,2.3e-05,-252.313212
+C,C5,15,10,2.0,2.0,0.000187,0.000118,0.000473,4.5e-05,-243.583281

@@ -1,0 +1,18 @@
+=== Fair Test Conditions ===
+Timestamp: 2025-08-29T14:37:30+01:00
+Title: fibonacci_go_a5
+Service: fibonacci-go-a5
+Scheduling: Native OS
+Load Threshold: 4.8
+Pre-test Load: 2.27
+Expected Pods: 1
+System State:
+  CPU Cores: 6
+  Available Memory: 11Gi
+  System Load: 2.27
+
+=== Post-Test Validation ===
+Test Completion: 2025-08-29T15:57:51+01:00
+Test Return Code: 0
+Final Pod Count: 1
+Final System Load: 15.31

@@ -1,0 +1,356 @@
+Found 15 statistics files:
+  - results_fibonacci_go_b1/fibonacci_go_b1_statistics.csv
+  - results_fibonacci_go_b2/fibonacci_go_b2_statistics.csv
+  - results_fibonacci_go_b3/fibonacci_go_b3_statistics.csv
+  - results_fibonacci_go_b4/fibonacci_go_b4_statistics.csv
+  - results_fibonacci_go_b5/fibonacci_go_b5_statistics.csv
+  - results_fibonacci_nodejs_b1/fibonacci_nodejs_b1_statistics.csv
+  - results_fibonacci_nodejs_b2/fibonacci_nodejs_b2_statistics.csv
+  - results_fibonacci_nodejs_b3/fibonacci_nodejs_b3_statistics.csv
+  - results_fibonacci_nodejs_b4/fibonacci_nodejs_b4_statistics.csv
+  - results_fibonacci_nodejs_b5/fibonacci_nodejs_b5_statistics.csv
+  - results_fibonacci_python_b1/fibonacci_python_b1_statistics.csv
+  - results_fibonacci_python_b2/fibonacci_python_b2_statistics.csv
+  - results_fibonacci_python_b3/fibonacci_python_b3_statistics.csv
+  - results_fibonacci_python_b4/fibonacci_python_b4_statistics.csv
+  - results_fibonacci_python_b5/fibonacci_python_b5_statistics.csv
+
+================================================================================
+MULTI-POD COST ANALYSIS: A/B/C SERIES COMPARISON
+Multiple RPS levels: 100, 200, 300, 400, 500 RPS
+================================================================================
+
+--- Processing: fibonacci_go_b1_statistics.csv ---
+Found achieved RPS data: results_fibonacci_go_b1/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=go, Config=B1, Series=B
+Configuration: 1.0vCPU × 1.0GB × 1 pods (concurrency: 100/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.67 (98.7% efficiency)
+  100.0 RPS: 1/1 pods busy (avg latency: 23037μs, N_in_service: 2.3, utilization: 2.3%)
+  Using achieved RPS from summary: 200.0 -> 185.93 (93.0% efficiency)
+  200.0 RPS: 1/1 pods busy (avg latency: 46481μs, N_in_service: 8.6, utilization: 8.6%)
+  Using achieved RPS from summary: 300.0 -> 274.04 (91.3% efficiency)
+  300.0 RPS: 1/1 pods busy (avg latency: 101044μs, N_in_service: 27.7, utilization: 27.7%)
+  Using achieved RPS from summary: 400.0 -> 353.82 (88.5% efficiency)
+  400.0 RPS: 1/1 pods busy (avg latency: 693866μs, N_in_service: 245.5, utilization: 245.5%)
+  Using achieved RPS from summary: 500.0 -> 351.91 (70.4% efficiency)
+  500.0 RPS: 1/1 pods busy (avg latency: 1058735μs, N_in_service: 372.6, utilization: 372.6%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_go_b2_statistics.csv ---
+Found achieved RPS data: results_fibonacci_go_b2/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=go, Config=B2, Series=B
+Configuration: 0.5vCPU × 0.5GB × 2 pods (concurrency: 50/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.91 (98.9% efficiency)
+  100.0 RPS: 1/2 pods busy (avg latency: 23506μs, N_in_service: 2.3, utilization: 2.3%)
+  Using achieved RPS from summary: 200.0 -> 188.36 (94.2% efficiency)
+  200.0 RPS: 1/2 pods busy (avg latency: 33164μs, N_in_service: 6.2, utilization: 6.2%)
+  Using achieved RPS from summary: 300.0 -> 261.15 (87.1% efficiency)
+  300.0 RPS: 1/2 pods busy (avg latency: 50817μs, N_in_service: 13.3, utilization: 13.3%)
+  Using achieved RPS from summary: 400.0 -> 309.60 (77.4% efficiency)
+  400.0 RPS: 1/2 pods busy (avg latency: 74073μs, N_in_service: 22.9, utilization: 22.9%)
+  Using achieved RPS from summary: 500.0 -> 301.98 (60.4% efficiency)
+  500.0 RPS: 1/2 pods busy (avg latency: 75230μs, N_in_service: 22.7, utilization: 22.7%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_go_b3_statistics.csv ---
+Found achieved RPS data: results_fibonacci_go_b3/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=go, Config=B3, Series=B
+Configuration: 0.25vCPU × 0.25GB × 4 pods (concurrency: 25/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.70 (97.7% efficiency)
+  100.0 RPS: 1/4 pods busy (avg latency: 29297μs, N_in_service: 2.9, utilization: 2.9%)
+  Using achieved RPS from summary: 200.0 -> 177.31 (88.7% efficiency)
+  200.0 RPS: 1/4 pods busy (avg latency: 45397μs, N_in_service: 8.0, utilization: 8.0%)
+  Using achieved RPS from summary: 300.0 -> 259.23 (86.4% efficiency)
+  300.0 RPS: 1/4 pods busy (avg latency: 79883μs, N_in_service: 20.7, utilization: 20.7%)
+  Using achieved RPS from summary: 400.0 -> 273.06 (68.3% efficiency)
+  400.0 RPS: 2/4 pods busy (avg latency: 127801μs, N_in_service: 34.9, utilization: 34.9%)
+  Using achieved RPS from summary: 500.0 -> 269.74 (53.9% efficiency)
+  500.0 RPS: 2/4 pods busy (avg latency: 119551μs, N_in_service: 32.2, utilization: 32.2%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_go_b4_statistics.csv ---
+Found achieved RPS data: results_fibonacci_go_b4/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=go, Config=B4, Series=B
+Configuration: 0.125vCPU × 0.125GB × 8 pods (concurrency: 12/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.61 (98.6% efficiency)
+  100.0 RPS: 1/8 pods busy (avg latency: 32258μs, N_in_service: 3.2, utilization: 3.3%)
+  Using achieved RPS from summary: 200.0 -> 188.09 (94.0% efficiency)
+  200.0 RPS: 1/8 pods busy (avg latency: 54095μs, N_in_service: 10.2, utilization: 10.6%)
+  Using achieved RPS from summary: 300.0 -> 242.24 (80.7% efficiency)
+  300.0 RPS: 3/8 pods busy (avg latency: 110166μs, N_in_service: 26.7, utilization: 27.8%)
+  Using achieved RPS from summary: 400.0 -> 266.83 (66.7% efficiency)
+  400.0 RPS: 5/8 pods busy (avg latency: 200784μs, N_in_service: 53.6, utilization: 55.8%)
+  Using achieved RPS from summary: 500.0 -> 291.70 (58.3% efficiency)
+  500.0 RPS: 7/8 pods busy (avg latency: 272891μs, N_in_service: 79.6, utilization: 82.9%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_go_b5_statistics.csv ---
+Found achieved RPS data: results_fibonacci_go_b5/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=go, Config=B5, Series=B
+Configuration: 0.1vCPU × 0.1GB × 10 pods (concurrency: 10/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.40 (97.4% efficiency)
+  100.0 RPS: 1/10 pods busy (avg latency: 34750μs, N_in_service: 3.4, utilization: 3.4%)
+  Using achieved RPS from summary: 200.0 -> 184.33 (92.2% efficiency)
+  200.0 RPS: 2/10 pods busy (avg latency: 70951μs, N_in_service: 13.1, utilization: 13.1%)
+  Using achieved RPS from summary: 300.0 -> 234.49 (78.2% efficiency)
+  300.0 RPS: 4/10 pods busy (avg latency: 130430μs, N_in_service: 30.6, utilization: 30.6%)
+  Using achieved RPS from summary: 400.0 -> 260.45 (65.1% efficiency)
+  400.0 RPS: 6/10 pods busy (avg latency: 222741μs, N_in_service: 58.0, utilization: 58.0%)
+  Using achieved RPS from summary: 500.0 -> 260.16 (52.0% efficiency)
+  500.0 RPS: 8/10 pods busy (avg latency: 275923μs, N_in_service: 71.8, utilization: 71.8%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_nodejs_b1_statistics.csv ---
+Found achieved RPS data: results_fibonacci_nodejs_b1/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=nodejs, Config=B1, Series=B
+Configuration: 1.0vCPU × 1.0GB × 1 pods (concurrency: 100/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.89 (97.9% efficiency)
+  100.0 RPS: 1/1 pods busy (avg latency: 26145μs, N_in_service: 2.6, utilization: 2.6%)
+  Using achieved RPS from summary: 200.0 -> 183.73 (91.9% efficiency)
+  200.0 RPS: 1/1 pods busy (avg latency: 52636μs, N_in_service: 9.7, utilization: 9.7%)
+  Using achieved RPS from summary: 300.0 -> 270.22 (90.1% efficiency)
+  300.0 RPS: 1/1 pods busy (avg latency: 95744μs, N_in_service: 25.9, utilization: 25.9%)
+  Using achieved RPS from summary: 400.0 -> 343.19 (85.8% efficiency)
+  400.0 RPS: 1/1 pods busy (avg latency: 920775μs, N_in_service: 316.0, utilization: 316.0%)
+  Using achieved RPS from summary: 500.0 -> 336.44 (67.3% efficiency)
+  500.0 RPS: 1/1 pods busy (avg latency: 726248μs, N_in_service: 244.3, utilization: 244.3%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_nodejs_b2_statistics.csv ---
+Found achieved RPS data: results_fibonacci_nodejs_b2/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=nodejs, Config=B2, Series=B
+Configuration: 0.5vCPU × 0.5GB × 2 pods (concurrency: 50/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.12 (97.1% efficiency)
+  100.0 RPS: 1/2 pods busy (avg latency: 28820μs, N_in_service: 2.8, utilization: 2.8%)
+  Using achieved RPS from summary: 200.0 -> 178.69 (89.3% efficiency)
+  200.0 RPS: 1/2 pods busy (avg latency: 38990μs, N_in_service: 7.0, utilization: 7.0%)
+  Using achieved RPS from summary: 300.0 -> 250.90 (83.6% efficiency)
+  300.0 RPS: 1/2 pods busy (avg latency: 56403μs, N_in_service: 14.2, utilization: 14.2%)
+  Using achieved RPS from summary: 400.0 -> 307.59 (76.9% efficiency)
+  400.0 RPS: 1/2 pods busy (avg latency: 74218μs, N_in_service: 22.8, utilization: 22.8%)
+  Using achieved RPS from summary: 500.0 -> 308.51 (61.7% efficiency)
+  500.0 RPS: 1/2 pods busy (avg latency: 76900μs, N_in_service: 23.7, utilization: 23.7%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_nodejs_b3_statistics.csv ---
+Found achieved RPS data: results_fibonacci_nodejs_b3/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=nodejs, Config=B3, Series=B
+Configuration: 0.25vCPU × 0.25GB × 4 pods (concurrency: 25/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 96.99 (97.0% efficiency)
+  100.0 RPS: 1/4 pods busy (avg latency: 32374μs, N_in_service: 3.1, utilization: 3.1%)
+  Using achieved RPS from summary: 200.0 -> 171.22 (85.6% efficiency)
+  200.0 RPS: 1/4 pods busy (avg latency: 49720μs, N_in_service: 8.5, utilization: 8.5%)
+  Using achieved RPS from summary: 300.0 -> 239.58 (79.9% efficiency)
+  300.0 RPS: 1/4 pods busy (avg latency: 62549μs, N_in_service: 15.0, utilization: 15.0%)
+  Using achieved RPS from summary: 400.0 -> 284.37 (71.1% efficiency)
+  400.0 RPS: 1/4 pods busy (avg latency: 86490μs, N_in_service: 24.6, utilization: 24.6%)
+  Using achieved RPS from summary: 500.0 -> 287.02 (57.4% efficiency)
+  500.0 RPS: 1/4 pods busy (avg latency: 85142μs, N_in_service: 24.4, utilization: 24.4%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_nodejs_b4_statistics.csv ---
+Found achieved RPS data: results_fibonacci_nodejs_b4/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=nodejs, Config=B4, Series=B
+Configuration: 0.125vCPU × 0.125GB × 8 pods (concurrency: 12/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 96.28 (96.3% efficiency)
+  100.0 RPS: 1/8 pods busy (avg latency: 40270μs, N_in_service: 3.9, utilization: 4.0%)
+  Using achieved RPS from summary: 200.0 -> 167.39 (83.7% efficiency)
+  200.0 RPS: 1/8 pods busy (avg latency: 70038μs, N_in_service: 11.7, utilization: 12.2%)
+  Using achieved RPS from summary: 300.0 -> 233.92 (78.0% efficiency)
+  300.0 RPS: 3/8 pods busy (avg latency: 128833μs, N_in_service: 30.1, utilization: 31.4%)
+  Using achieved RPS from summary: 400.0 -> 259.78 (64.9% efficiency)
+  400.0 RPS: 5/8 pods busy (avg latency: 204348μs, N_in_service: 53.1, utilization: 55.3%)
+  Using achieved RPS from summary: 500.0 -> 255.90 (51.2% efficiency)
+  500.0 RPS: 5/8 pods busy (avg latency: 220302μs, N_in_service: 56.4, utilization: 58.7%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_nodejs_b5_statistics.csv ---
+Found achieved RPS data: results_fibonacci_nodejs_b5/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=nodejs, Config=B5, Series=B
+Configuration: 0.1vCPU × 0.1GB × 10 pods (concurrency: 10/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.73 (97.7% efficiency)
+  100.0 RPS: 1/10 pods busy (avg latency: 37054μs, N_in_service: 3.6, utilization: 3.6%)
+  Using achieved RPS from summary: 200.0 -> 184.75 (92.4% efficiency)
+  200.0 RPS: 2/10 pods busy (avg latency: 68213μs, N_in_service: 12.6, utilization: 12.6%)
+  Using achieved RPS from summary: 300.0 -> 258.55 (86.2% efficiency)
+  300.0 RPS: 5/10 pods busy (avg latency: 170260μs, N_in_service: 44.0, utilization: 44.0%)
+  Using achieved RPS from summary: 400.0 -> 281.38 (70.3% efficiency)
+  400.0 RPS: 10/10 pods busy (avg latency: 344950μs, N_in_service: 97.1, utilization: 97.1%)
+  Using achieved RPS from summary: 500.0 -> 282.70 (56.5% efficiency)
+  500.0 RPS: 10/10 pods busy (avg latency: 393556μs, N_in_service: 111.3, utilization: 111.3%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_python_b1_statistics.csv ---
+Found achieved RPS data: results_fibonacci_python_b1/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=python, Config=B1, Series=B
+Configuration: 1.0vCPU × 1.0GB × 1 pods (concurrency: 100/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.79 (98.8% efficiency)
+  100.0 RPS: 1/1 pods busy (avg latency: 25299μs, N_in_service: 2.5, utilization: 2.5%)
+  Using achieved RPS from summary: 200.0 -> 187.52 (93.8% efficiency)
+  200.0 RPS: 1/1 pods busy (avg latency: 58747μs, N_in_service: 11.0, utilization: 11.0%)
+  Using achieved RPS from summary: 300.0 -> 284.98 (95.0% efficiency)
+  300.0 RPS: 1/1 pods busy (avg latency: 141741μs, N_in_service: 40.4, utilization: 40.4%)
+  Using achieved RPS from summary: 400.0 -> 344.48 (86.1% efficiency)
+  400.0 RPS: 1/1 pods busy (avg latency: 2714001μs, N_in_service: 934.9, utilization: 934.9%)
+  Using achieved RPS from summary: 500.0 -> 358.44 (71.7% efficiency)
+  500.0 RPS: 1/1 pods busy (avg latency: 2906991μs, N_in_service: 1042.0, utilization: 1042.0%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_python_b2_statistics.csv ---
+Found achieved RPS data: results_fibonacci_python_b2/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=python, Config=B2, Series=B
+Configuration: 0.5vCPU × 0.5GB × 2 pods (concurrency: 50/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.47 (98.5% efficiency)
+  100.0 RPS: 1/2 pods busy (avg latency: 26420μs, N_in_service: 2.6, utilization: 2.6%)
+  Using achieved RPS from summary: 200.0 -> 186.40 (93.2% efficiency)
+  200.0 RPS: 1/2 pods busy (avg latency: 36518μs, N_in_service: 6.8, utilization: 6.8%)
+  Using achieved RPS from summary: 300.0 -> 264.64 (88.2% efficiency)
+  300.0 RPS: 1/2 pods busy (avg latency: 59755μs, N_in_service: 15.8, utilization: 15.8%)
+  Using achieved RPS from summary: 400.0 -> 334.70 (83.7% efficiency)
+  400.0 RPS: 1/2 pods busy (avg latency: 86448μs, N_in_service: 28.9, utilization: 28.9%)
+  Using achieved RPS from summary: 500.0 -> 329.27 (65.9% efficiency)
+  500.0 RPS: 1/2 pods busy (avg latency: 83643μs, N_in_service: 27.5, utilization: 27.5%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_python_b3_statistics.csv ---
+Found achieved RPS data: results_fibonacci_python_b3/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=python, Config=B3, Series=B
+Configuration: 0.25vCPU × 0.25GB × 4 pods (concurrency: 25/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.29 (98.3% efficiency)
+  100.0 RPS: 1/4 pods busy (avg latency: 30013μs, N_in_service: 3.0, utilization: 3.0%)
+  Using achieved RPS from summary: 200.0 -> 180.98 (90.5% efficiency)
+  200.0 RPS: 1/4 pods busy (avg latency: 43923μs, N_in_service: 7.9, utilization: 7.9%)
+  Using achieved RPS from summary: 300.0 -> 279.96 (93.3% efficiency)
+  300.0 RPS: 1/4 pods busy (avg latency: 70539μs, N_in_service: 19.7, utilization: 19.7%)
+  Using achieved RPS from summary: 400.0 -> 359.21 (89.8% efficiency)
+  400.0 RPS: 2/4 pods busy (avg latency: 90736μs, N_in_service: 32.6, utilization: 32.6%)
+  Using achieved RPS from summary: 500.0 -> 342.25 (68.5% efficiency)
+  500.0 RPS: 2/4 pods busy (avg latency: 96009μs, N_in_service: 32.9, utilization: 32.9%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_python_b4_statistics.csv ---
+Found achieved RPS data: results_fibonacci_python_b4/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=python, Config=B4, Series=B
+Configuration: 0.125vCPU × 0.125GB × 8 pods (concurrency: 12/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 97.43 (97.4% efficiency)
+  100.0 RPS: 1/8 pods busy (avg latency: 36559μs, N_in_service: 3.6, utilization: 3.7%)
+  Using achieved RPS from summary: 200.0 -> 185.19 (92.6% efficiency)
+  200.0 RPS: 1/8 pods busy (avg latency: 49582μs, N_in_service: 9.2, utilization: 9.6%)
+  Using achieved RPS from summary: 300.0 -> 274.07 (91.4% efficiency)
+  300.0 RPS: 2/8 pods busy (avg latency: 77562μs, N_in_service: 21.3, utilization: 22.1%)
+  Using achieved RPS from summary: 400.0 -> 339.21 (84.8% efficiency)
+  400.0 RPS: 4/8 pods busy (avg latency: 125778μs, N_in_service: 42.7, utilization: 44.4%)
+  Using achieved RPS from summary: 500.0 -> 292.23 (58.4% efficiency)
+  500.0 RPS: 3/8 pods busy (avg latency: 104143μs, N_in_service: 30.4, utilization: 31.7%)
+Processed: 5 configurations
+
+--- Processing: fibonacci_python_b5_statistics.csv ---
+Found achieved RPS data: results_fibonacci_python_b5/achieved_rps_summary.csv
+Loaded achieved RPS for targets: [20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 360.0, 380.0, 400.0, 420.0, 440.0, 460.0, 480.0, 500.0]
+Detected: Runtime=python, Config=B5, Series=B
+Configuration: 0.1vCPU × 0.1GB × 10 pods (concurrency: 10/pod)
+Found data for RPS levels: [100, 200, 300, 400, 500]
+  Using achieved RPS from summary: 100.0 -> 98.34 (98.3% efficiency)
+  100.0 RPS: 1/10 pods busy (avg latency: 37223μs, N_in_service: 3.7, utilization: 3.7%)
+  Using achieved RPS from summary: 200.0 -> 184.75 (92.4% efficiency)
+  200.0 RPS: 2/10 pods busy (avg latency: 56856μs, N_in_service: 10.5, utilization: 10.5%)
+  Using achieved RPS from summary: 300.0 -> 273.74 (91.2% efficiency)
+  300.0 RPS: 4/10 pods busy (avg latency: 112367μs, N_in_service: 30.8, utilization: 30.8%)
+  Using achieved RPS from summary: 400.0 -> 348.96 (87.2% efficiency)
+  400.0 RPS: 7/10 pods busy (avg latency: 176901μs, N_in_service: 61.7, utilization: 61.7%)
+  Using achieved RPS from summary: 500.0 -> 345.83 (69.2% efficiency)
+  500.0 RPS: 6/10 pods busy (avg latency: 169709μs, N_in_service: 58.7, utilization: 58.7%)
+Processed: 5 configurations
+
+Total configurations processed: 75
+
+================================================================================
+MULTI-POD CLOUD RUN COST ANALYSIS
+================================================================================
+
+SERIES SCALING STRATEGIES:
+  A-Series: Single pod scale-up (varying resources per pod)
+  B-Series: Multi-pod scale-out (constant total resources)
+  C-Series: Multi-pod scale-out (higher total resources)
+
+B-SERIES ANALYSIS:
+  Strategy: Constant total resources (1.0 vCPU total), increasing pods
+  B1: 1.0vCPU × 1 pods = 1.0 total vCPU
+  B2: 0.5vCPU × 2 pods = 1.0 total vCPU
+  B3: 0.25vCPU × 4 pods = 1.0 total vCPU
+  B4: 0.125vCPU × 8 pods = 1.0 total vCPU
+  B5: 0.1vCPU × 10 pods = 1.0 total vCPU
+  Average instance cost: $0.000104
+  Average request cost: $0.004185
+  Instance cheaper: 75/75 (100.0%)
+
+CROSS-SERIES COST COMPARISON:
+       instance_cost_per_1k                     request_cost_per_1k                     num_pods         total_vcpu          
+                       mean       min       max                mean       min       max     mean min max       mean  min  max
+series                                                                                                                       
+B                  0.000104  0.000056  0.000208            0.004185  0.000492  0.077435      5.0   1  10        1.0  1.0  1.0
+
+BUSY PODS & FLEET UTILIZATION BY RPS LEVEL:
+  100 RPS:
+    B-Series: 1.0-1.0 busy pods (avg: 1.0), utilization: 2.3%-4.0% (avg: 3.0%)
+  200 RPS:
+    B-Series: 1.0-2.0 busy pods (avg: 1.2), utilization: 6.2%-13.1% (avg: 9.5%)
+  300 RPS:
+    B-Series: 1.0-5.0 busy pods (avg: 2.0), utilization: 13.3%-44.0% (avg: 25.3%)
+  400 RPS:
+    B-Series: 1.0-10.0 busy pods (avg: 3.2), utilization: 22.8%-934.9% (avg: 135.7%)
+  500 RPS:
+    B-Series: 1.0-10.0 busy pods (avg: 3.3), utilization: 22.7%-1042.0% (avg: 149.2%)
+
+MULTI-POD PENALTY ANALYSIS:
+  B-Series at 100 RPS: Multi-pod adds 0.7% cost penalty
+  B-Series at 200 RPS: Multi-pod adds 2.5% cost penalty
+  B-Series at 300 RPS: Multi-pod adds 8.3% cost penalty
+
+BREAK-EVEN ANALYSIS (Request = Instance cost):
+Break-even latency per configuration (when request-based becomes competitive):
+  B1 (1 pods, 1.0vCPU): -7.5ms
+  B2 (2 pods, 0.5vCPU): -15.1ms
+  B3 (4 pods, 0.25vCPU): -30.2ms
+  B4 (8 pods, 0.125vCPU): -60.4ms
+  B5 (10 pods, 0.1vCPU): -75.5ms
+
+RUNTIME PERFORMANCE:
+  Go: Instance avg=$0.000106, Request avg=$0.002848
+  Nodejs: Instance avg=$0.000107, Request avg=$0.002756
+  Python: Instance avg=$0.000101, Request avg=$0.006951
+Detailed results saved to: b_series_analysis/multi_pod_cost_analysis.csv
+Series summary saved to: b_series_analysis/series_summary.csv
+Multi-pod penalty analysis saved to: b_series_analysis/multi_pod_penalty_analysis.csv
+Series comparison chart saved to: b_series_analysis/multi_pod_series_comparison.png
+
+✓ Multi-pod analysis completed!
+✓ Results saved in: b_series_analysis/
