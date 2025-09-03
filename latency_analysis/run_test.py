@@ -24,12 +24,34 @@ class ComprehensiveTestRunner:
     DEFAULT_TEST_DURATION = 60
     DEFAULT_ITERATIONS_PER_RPS = 3
     
-    def __init__(self, title, invoker_dir="../tools/invoker", service_name=None, namespace="default", skip_visualizations=False):
+    # Adaptive testing configuration
+    ADAPTIVE_START_RPS = 20
+    ADAPTIVE_INCREMENT = 20
+    ADAPTIVE_MAX_RPS = 1000
+    
+    # Stopping conditions (simplified - focus on throughput)
+    MIN_THROUGHPUT_RATIO = 0.85  # Stop if actual throughput < 85% of target (primary condition)
+    MIN_CPU_UTILIZATION = 0.80   # Only stop if CPU utilization > 80% (prevents premature stopping)
+    MAX_ERROR_RATE = 0.30        # Stop if error rate > 30% (infrastructure bottleneck)
+    CONSECUTIVE_FAILURES = 1     # Stop after 1 failed RPS level (immediate stop)
+    
+    def __init__(self, title, invoker_dir="../tools/invoker", service_name=None, namespace="default", skip_visualizations=False, adaptive_mode=False):
         self.title = title
-        self.rps_values = self.DEFAULT_RPS_VALUES
+        self.adaptive_mode = adaptive_mode
+        
+        if adaptive_mode:
+            # Use adaptive RPS values (will be generated dynamically)
+            self.rps_values = []
+            self.adaptive_current_rps = self.ADAPTIVE_START_RPS
+            self.consecutive_failures = 0
+            self.test_results = []  # Store results for adaptive decisions
+        else:
+            # Use fixed RPS values
+            self.rps_values = self.DEFAULT_RPS_VALUES
+            
         self.test_duration = self.DEFAULT_TEST_DURATION
         self.iterations_per_rps = self.DEFAULT_ITERATIONS_PER_RPS
-        self.durations = [self.test_duration] * len(self.rps_values)
+        self.durations = [self.test_duration] * len(self.rps_values) if not adaptive_mode else []
         self.invoker_dir = invoker_dir
         self.results_dir = f"results_{title}"
         self.stats_file = os.path.join(self.results_dir, f"{title}_statistics.csv")
@@ -45,10 +67,23 @@ class ComprehensiveTestRunner:
         
         print(f"=== Comprehensive Test Runner ===")
         print(f"Test Title: {title}")
-        print(f"RPS Values: {self.rps_values}")
-        print(f"Duration: {self.test_duration} seconds (all tests)")
+        
+        if adaptive_mode:
+            print(f"Mode: ADAPTIVE (stops when throughput drops)")
+            print(f"Starting RPS: {self.ADAPTIVE_START_RPS}")
+            print(f"RPS Increment: {self.ADAPTIVE_INCREMENT}")
+            print(f"Maximum RPS: {self.ADAPTIVE_MAX_RPS}")
+            print(f"Stopping Conditions:")
+            print(f"  - Throughput < {self.MIN_THROUGHPUT_RATIO*100:.1f}% of target RPS AND")
+            print(f"  - CPU utilization > {self.MIN_CPU_UTILIZATION*100:.1f}%")
+            print(f"  - OR Error rate > {self.MAX_ERROR_RATE*100:.1f}% (infrastructure bottleneck)")
+        else:
+            print(f"Mode: FIXED RPS")
+            print(f"RPS Values: {self.rps_values}")
+            print(f"Total Tests: {len(self.rps_values) * self.iterations_per_rps}")
+            
+        print(f"Duration: {self.test_duration} seconds (per RPS level)")
         print(f"Iterations per RPS: {self.iterations_per_rps}")
-        print(f"Total Tests: {len(self.rps_values) * self.iterations_per_rps}")
         print(f"Results Directory: {self.results_dir}")
         print(f"Statistics File: {self.stats_file}")
         print(f"Raw Files Directory: {self.raw_files_dir}")
@@ -110,11 +145,85 @@ class ComprehensiveTestRunner:
             print(f" Failed to build invoker: {e}")
             sys.exit(1)
     
+    def detect_constrained_namespace(self, service_name):
+        """Detect required constrained namespace from service name."""
+        import re
+        
+        # Extract configuration (a1, b2, c4, etc.) from service name
+        # Matches patterns like: fibonacci-nodejs-a1, fibonacci-python-b3, fibonacci-go-c5
+        match = re.search(r'fibonacci-[a-z]+-([abc][1-5])', service_name)
+        if match:
+            config = match.group(1)
+            return f"constrained-tests-{config}"
+        return None
+    
+    def verify_constrained_namespace(self, constrained_namespace):
+        """Verify that the constrained namespace exists and has proper resource policies."""
+        print(f" Verifying constrained namespace: {constrained_namespace}")
+        
+        try:
+            # Check if namespace exists
+            result = subprocess.run([
+                "kubectl", "get", "namespace", constrained_namespace
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f" ERROR: Constrained namespace {constrained_namespace} not found!")
+                print(f" This service requires a constrained namespace for proper resource enforcement.")
+                print(f" Please deploy the namespace configuration first:")
+                print(f" kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-{constrained_namespace}.yaml")
+                return False
+            
+            # Verify LimitRange exists
+            result = subprocess.run([
+                "kubectl", "get", "limitrange", "-n", constrained_namespace, "--no-headers"
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0 or not result.stdout.strip():
+                print(f" ERROR: No LimitRange found in {constrained_namespace}!")
+                print(f" The constrained namespace exists but lacks resource enforcement policies.")
+                print(f" Please redeploy the namespace configuration:")
+                print(f" kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-{constrained_namespace}.yaml")
+                return False
+            
+            # Verify ResourceQuota exists
+            result = subprocess.run([
+                "kubectl", "get", "resourcequota", "-n", constrained_namespace, "--no-headers"
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0 or not result.stdout.strip():
+                print(f" ERROR: No ResourceQuota found in {constrained_namespace}!")
+                print(f" The constrained namespace exists but lacks resource quota policies.")
+                print(f" Please redeploy the namespace configuration:")
+                print(f" kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-{constrained_namespace}.yaml")
+                return False
+            
+            print(f" ✓ Constrained namespace validation passed")
+            print(f" ✓ LimitRange and ResourceQuota policies are active")
+            return True
+            
+        except Exception as e:
+            print(f" Failed to verify constrained namespace: {e}")
+            return False
+
     def update_endpoints_json(self):
         """Update endpoints.json with the current service URL if service_name is provided."""
         if not self.service_name:
             print(" No service name provided, skipping endpoints.json update")
             return True
+        
+        # Detect and verify constrained namespace
+        constrained_namespace = self.detect_constrained_namespace(self.service_name)
+        if constrained_namespace:
+            print(f" Detected constrained namespace: {constrained_namespace}")
+            if not self.verify_constrained_namespace(constrained_namespace):
+                return False
+            # Update namespace to use the constrained one
+            self.namespace = constrained_namespace
+            print(f" → Using constrained namespace: {self.namespace}")
+        else:
+            print(f" No constrained namespace detected for service: {self.service_name}")
+            print(f" → Using namespace: {self.namespace}")
         
         print(f" Updating endpoints.json for service: {self.service_name}")
         try:
@@ -155,6 +264,260 @@ class ComprehensiveTestRunner:
         except Exception as e:
             print(f" Failed to update endpoints.json: {e}")
             return False
+    
+    def check_resource_quota_status(self):
+        """Check if resource quota is near exhaustion."""
+        if not self.service_name:
+            return False, "No service specified"
+            
+        # Detect constrained namespace
+        constrained_namespace = self.detect_constrained_namespace(self.service_name)
+        if not constrained_namespace:
+            return False, "No constrained namespace detected"
+            
+        try:
+            # Get resource quota status
+            result = subprocess.run([
+                "kubectl", "get", "resourcequota", "-n", constrained_namespace,
+                "-o", "jsonpath={.items[0].status}"
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                return False, f"Failed to get resource quota: {result.stderr}"
+                
+            import json
+            quota_status = json.loads(result.stdout)
+            
+            # Check CPU usage
+            if 'used' in quota_status and 'hard' in quota_status:
+                used_cpu = quota_status['used'].get('requests.cpu', '0m')
+                hard_cpu = quota_status['hard'].get('requests.cpu', '0m')
+                
+                # Convert to millicores for comparison
+                used_millicores = self._parse_cpu_to_millicores(used_cpu)
+                hard_millicores = self._parse_cpu_to_millicores(hard_cpu)
+                
+                if hard_millicores > 0:
+                    usage_ratio = used_millicores / hard_millicores
+                    if usage_ratio > 0.95:  # 95% usage
+                        return True, f"Resource quota near exhaustion: {usage_ratio*100:.1f}% CPU used"
+                        
+            return False, "Resource quota OK"
+            
+        except Exception as e:
+            return False, f"Error checking resource quota: {e}"
+    
+    def _parse_cpu_to_millicores(self, cpu_str):
+        """Convert CPU string to millicores."""
+        if cpu_str.endswith('m'):
+            return int(cpu_str[:-1])
+        else:
+            return int(float(cpu_str) * 1000)
+    
+    def get_current_cpu_utilization(self):
+        """Get current CPU utilization from pod monitoring data.
+        
+        Returns:
+            tuple: (current_cpu_millicores, cpu_limit_millicores, utilization_ratio)
+                   Returns (0, 0, 0) if data unavailable
+        """
+        if not hasattr(self, 'monitoring_file') or not os.path.exists(self.monitoring_file):
+            return 0, 0, 0
+            
+        try:
+            # Read the last few lines of monitoring data
+            with open(self.monitoring_file, 'r') as f:
+                lines = f.readlines()
+            
+            if len(lines) < 2:  # Need at least header + 1 data line
+                return 0, 0, 0
+            
+            # Get the most recent CPU usage (last 3 lines to get average)
+            recent_lines = lines[-3:] if len(lines) >= 4 else lines[-2:]  # Skip header
+            cpu_values = []
+            
+            for line in recent_lines:
+                if line.strip() and not line.startswith('timestamp'):
+                    parts = line.split(',')
+                    if len(parts) >= 4:
+                        try:
+                            cpu_millicores = int(parts[3])  # cpu_usage_millicores column
+                            cpu_values.append(cpu_millicores)
+                        except ValueError:
+                            continue
+            
+            if not cpu_values:
+                return 0, 0, 0
+                
+            current_cpu = sum(cpu_values) / len(cpu_values)  # Average recent usage
+            
+            # Get CPU limits from service configuration
+            cpu_limit_millicores = self.get_service_cpu_limits()
+            
+            utilization_ratio = current_cpu / cpu_limit_millicores if cpu_limit_millicores > 0 else 0
+            
+            return current_cpu, cpu_limit_millicores, utilization_ratio
+            
+        except Exception as e:
+            print(f" Warning: Could not get CPU utilization: {e}")
+            return 0, 0, 0
+    
+    def get_service_cpu_limits(self):
+        """Get CPU limits for the current service from Kubernetes.
+        
+        Returns:
+            int: Total CPU limits in millicores for all containers in the pod
+        """
+        if not self.service_name or not self.namespace:
+            return 0
+            
+        try:
+            # Get the service configuration
+            cmd = [
+                "kubectl", "get", "ksvc", self.service_name,
+                "-n", self.namespace,
+                "-o", "json"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            service_data = json.loads(result.stdout)
+            
+            # Extract container specs from the service
+            containers = service_data.get('spec', {}).get('template', {}).get('spec', {}).get('containers', [])
+            
+            total_cpu_limit = 0
+            for container in containers:
+                resources = container.get('resources', {})
+                limits = resources.get('limits', {})
+                cpu_limit = limits.get('cpu', '0')
+                
+                # Convert to millicores and add to total
+                total_cpu_limit += self._parse_cpu_to_millicores(cpu_limit)
+            
+            return total_cpu_limit
+            
+        except Exception as e:
+            print(f" Warning: Could not get service CPU limits: {e}")
+            return 0
+    
+    def get_error_rate_from_stats(self, stats):
+        """Calculate error rate from statistics.
+        
+        Args:
+            stats: Dictionary containing test statistics
+            
+        Returns:
+            float: Error rate (0.0 to 1.0), or 0.0 if cannot determine
+        """
+        try:
+            total_requests = stats.get('total_requests', 0)
+            if total_requests == 0:
+                return 0.0
+                
+            # Look for error indicators in the stats
+            # This is a heuristic based on typical invoker behavior
+            actual_rps = stats.get('throughput_rps', 0)
+            # Estimate expected requests based on test duration
+            expected_requests = actual_rps * self.test_duration if actual_rps > 0 else total_requests
+            
+            # If we got significantly fewer requests than expected, likely errors
+            if expected_requests > 0:
+                completion_rate = total_requests / expected_requests
+                error_rate = max(0.0, 1.0 - completion_rate)
+                return min(1.0, error_rate)
+            
+            return 0.0
+            
+        except Exception as e:
+            print(f" Warning: Could not calculate error rate: {e}")
+            return 0.0
+    
+    def detect_infrastructure_bottleneck(self, throughput_ratio, cpu_utilization, error_rate):
+        """Detect if we're hitting infrastructure bottlenecks vs computational limits.
+        
+        Returns:
+            tuple: (is_infrastructure_bottleneck, reason)
+        """
+        # High error rate indicates infrastructure issues
+        if error_rate > self.MAX_ERROR_RATE:  # 30% error rate
+            return True, f"High error rate ({error_rate*100:.1f}%) - likely queue-proxy or network bottleneck"
+            
+        # Low throughput + low CPU + moderate errors = infrastructure bottleneck
+        if throughput_ratio < 0.85 and cpu_utilization < 0.5 and error_rate > 0.1:
+            return True, f"Low throughput ({throughput_ratio*100:.1f}%) + low CPU ({cpu_utilization*100:.1f}%) + errors ({error_rate*100:.1f}%) - infrastructure bottleneck"
+            
+        # Very low throughput with very low CPU = clear infrastructure issue
+        if throughput_ratio < 0.7 and cpu_utilization < 0.3:
+            return True, f"Very low throughput ({throughput_ratio*100:.1f}%) with minimal CPU usage ({cpu_utilization*100:.1f}%) - infrastructure bottleneck"
+            
+        return False, ""
+    
+    def analyze_test_results(self, latency_file, target_rps):
+        """Analyze test results to determine if we should continue or stop."""
+        if not os.path.exists(latency_file):
+            return False, "Test failed - no latency file generated"
+            
+        # Load and analyze latency data
+        latency_data = self.load_latency_data(latency_file)
+        if latency_data is None or len(latency_data) == 0:
+            return False, "Test failed - no latency data"
+            
+        # Calculate statistics
+        stats = self.calculate_statistics(latency_data, self.test_duration, os.path.basename(latency_file))
+        if not stats:
+            return False, "Test failed - could not calculate statistics"
+            
+        # Store results for trend analysis
+        self.test_results.append({
+            'target_rps': target_rps,
+            'actual_rps': stats.get('throughput_rps', 0),
+            'p99_latency_ms': stats.get('p99', 0) / 1000,  # Convert μs to ms
+            'total_requests': stats.get('total_requests', 0),
+            'stats': stats
+        })
+        
+        # Primary stopping condition: throughput ratio
+        actual_rps = stats.get('throughput_rps', 0)
+        throughput_ratio = actual_rps / target_rps if target_rps > 0 else 0
+        
+        # Check CPU utilization to avoid premature stopping
+        current_cpu, cpu_limit, cpu_utilization = self.get_current_cpu_utilization()
+        
+        # Check for infrastructure bottleneck (high error rate)
+        error_rate = self.get_error_rate_from_stats(stats)
+        
+        # Check for infrastructure bottlenecks
+        is_infra_bottleneck, bottleneck_reason = self.detect_infrastructure_bottleneck(
+            throughput_ratio, cpu_utilization, error_rate)
+        
+        if throughput_ratio < self.MIN_THROUGHPUT_RATIO:
+            # Check if this is a true computational limit or infrastructure bottleneck
+            if cpu_utilization > self.MIN_CPU_UTILIZATION:  # True CPU bottleneck
+                return False, f"CAPACITY REACHED: {actual_rps:.1f} RPS achieved ({throughput_ratio*100:.1f}% of target {target_rps}), CPU: {cpu_utilization*100:.1f}%"
+            elif is_infra_bottleneck:  # Infrastructure bottleneck - stop gracefully
+                return False, f"INFRASTRUCTURE LIMIT: {bottleneck_reason} - stopping to avoid error flood"
+            else:
+                # Throughput is low but unclear why - continue with warning
+                p99_latency_ms = stats.get('p99', 0) / 1000  # Convert μs to ms
+                print(f" ⚠️  Low throughput ({throughput_ratio*100:.1f}%) but CPU utilization is only {cpu_utilization*100:.1f}% - continuing...")
+                return True, f"⚠️  RPS {target_rps}: {actual_rps:.1f} actual RPS ({throughput_ratio*100:.1f}%), CPU: {cpu_utilization*100:.1f}%, P99 = {p99_latency_ms:.1f}ms"
+            
+        # Test passed - system can handle this RPS level
+        p99_latency_ms = stats.get('p99', 0) / 1000  # Convert μs to ms
+        cpu_info = f", CPU: {cpu_utilization*100:.1f}%" if cpu_utilization > 0 else ""
+        return True, f"✓ RPS {target_rps}: {actual_rps:.1f} actual RPS ({throughput_ratio*100:.1f}%){cpu_info}, P99 = {p99_latency_ms:.1f}ms"
+    
+    def get_next_adaptive_rps(self):
+        """Get the next RPS value for adaptive testing."""
+        if self.adaptive_current_rps >= self.ADAPTIVE_MAX_RPS:
+            return None  # Reached maximum
+            
+        current_rps = self.adaptive_current_rps
+        self.adaptive_current_rps += self.ADAPTIVE_INCREMENT
+        return current_rps
+    
+    def should_stop_adaptive_testing(self):
+        """Check if adaptive testing should stop based on throughput failure."""
+        return self.consecutive_failures >= self.CONSECUTIVE_FAILURES
     
     def parse_latency_filename(self, filename):
         """Parse latency filename and extract RPS values and iteration info.
@@ -703,7 +1066,7 @@ class ComprehensiveTestRunner:
         
         # Create monitoring file with headers
         with open(self.monitoring_file, 'w') as f:
-            f.write("timestamp,pod_count,cpu_usage_millicores,memory_usage_mib\n")
+            f.write("timestamp,pod_count,ready_pods,cpu_usage_millicores,memory_usage_mib,pod_details\n")
         
         # Determine current revision for more precise pod monitoring
         self.label_selector = None
@@ -751,16 +1114,38 @@ class ComprehensiveTestRunner:
                 # Get current timestamp
                 timestamp = datetime.now().isoformat()
                 
-                # Get pod list for the selector
+                # Get detailed pod information
                 result = subprocess.run([
                     'kubectl', 'get', 'pods', '-n', self.namespace,
-                    '-l', self.label_selector, '--no-headers'
+                    '-l', self.label_selector, '--no-headers',
+                    '-o', 'custom-columns=NAME:.metadata.name,READY:.status.containerStatuses[*].ready,STATUS:.status.phase'
                 ], capture_output=True, text=True)
                 
                 pod_count = 0
+                ready_pods = 0
+                pod_details = ""
+                
                 if result.returncode == 0:
                     pod_lines = [ln for ln in result.stdout.strip().split('\n') if ln.strip()]
                     pod_count = len(pod_lines)
+                    
+                    # Count ready pods and create details string
+                    pod_statuses = []
+                    for line in pod_lines:
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            name = parts[0]
+                            ready_status = parts[1]
+                            phase = parts[2]
+                            
+                            # Check if pod is ready (all containers ready)
+                            if 'true' in ready_status.lower() and phase == 'Running':
+                                ready_pods += 1
+                                pod_statuses.append(f"{name}:Ready")
+                            else:
+                                pod_statuses.append(f"{name}:{phase}")
+                    
+                    pod_details = "|".join(pod_statuses)
                 
                 # Get CPU and memory usage
                 cpu_millicores = 0
@@ -811,7 +1196,7 @@ class ComprehensiveTestRunner:
                 
                 # Write data to file
                 with open(self.monitoring_file, 'a') as f:
-                    f.write(f"{timestamp},{pod_count},{cpu_millicores},{memory_mib}\n")
+                    f.write(f"{timestamp},{pod_count},{ready_pods},{cpu_millicores},{memory_mib},\"{pod_details}\"\n")
                 
                 # Wait for next interval
                 time.sleep(2)
@@ -876,7 +1261,14 @@ class ComprehensiveTestRunner:
 
     def _run_test_execution_phase(self):
         """Execute all invoker tests with iterations."""
-        print(f"\n--- Running {len(self.rps_values) * self.iterations_per_rps} Invoker Tests ---")
+        if self.adaptive_mode:
+            return self._run_adaptive_test_execution()
+        else:
+            return self._run_fixed_test_execution()
+    
+    def _run_fixed_test_execution(self):
+        """Execute fixed RPS tests with iterations."""
+        print(f"\n--- Running {len(self.rps_values) * self.iterations_per_rps} Fixed RPS Tests ---")
         
         for rps, duration in zip(self.rps_values, self.durations):
             print(f"\n{'='*50}")
@@ -891,6 +1283,76 @@ class ComprehensiveTestRunner:
             
             print(f" Completed all {self.iterations_per_rps} iterations for RPS {rps}")
             time.sleep(5)  # Longer delay between RPS levels
+        
+        return True
+    
+    def _run_adaptive_test_execution(self):
+        """Execute adaptive RPS tests that stop when system reaches limits."""
+        print(f"\n--- Running Adaptive RPS Tests (stops at system limits) ---")
+        
+        test_count = 0
+        while True:
+            # Get next RPS value
+            current_rps = self.get_next_adaptive_rps()
+            if current_rps is None:
+                print(f"\n Reached maximum RPS limit ({self.ADAPTIVE_MAX_RPS})")
+                break
+                
+            print(f"\n{'='*60}")
+            print(f"Testing RPS {current_rps} (adaptive test #{test_count + 1})")
+            print(f"{'='*60}")
+            
+            # Run iterations for this RPS level
+            rps_success = True
+            iteration_results = []
+            
+            for iteration in range(1, self.iterations_per_rps + 1):
+                print(f"\n--- Iteration {iteration}/{self.iterations_per_rps} ---")
+                
+                if not self.run_invoker_test(current_rps, self.test_duration, iteration):
+                    print(f" ✗ Test execution failed for RPS {current_rps}, iteration {iteration}")
+                    rps_success = False
+                    break
+                    
+                # Find and analyze the latest result
+                latency_files = glob.glob(os.path.join(self.results_dir, f"target_rps{current_rps:.2f}_iter{iteration:02d}_*.csv"))
+                if latency_files:
+                    latest_file = max(latency_files, key=os.path.getctime)
+                    success, message = self.analyze_test_results(latest_file, current_rps)
+                    iteration_results.append(success)
+                    print(f" → {message}")
+                    
+                    if not success:
+                        print(f" ✗ {message}")
+                        rps_success = False
+                        break
+                else:
+                    print(f" ✗ No latency file found for iteration {iteration}")
+                    rps_success = False
+                    break
+                    
+                time.sleep(2)  # Small delay between iterations
+            
+            # Analyze RPS level results
+            if rps_success and all(iteration_results):
+                print(f" ✓ RPS {current_rps} completed successfully - system can handle this load")
+                self.consecutive_failures = 0
+                self.rps_values.append(current_rps)  # Add to tested RPS values
+            else:
+                self.consecutive_failures += 1
+                print(f"\n🛑 STOPPING: System capacity reached at RPS {current_rps}")
+                print(f"   Last successful RPS: {max(self.rps_values) if self.rps_values else 'None'}")
+                break
+            
+            test_count += 1
+            print(f" Completed adaptive test #{test_count}")
+            time.sleep(5)  # Longer delay between RPS levels
+        
+        print(f"\n=== Adaptive Testing Complete ===")
+        print(f"Total RPS levels tested: {len(self.rps_values)}")
+        if self.rps_values:
+            print(f"RPS range: {min(self.rps_values)} - {max(self.rps_values)}")
+            print(f"Maximum sustainable RPS: {max(self.rps_values)}")
         
         return True
 
@@ -1300,18 +1762,19 @@ def parse_arguments():
     parser.add_argument('--service', '-s', help='Kubernetes service name to monitor (enables pod monitoring)')
     parser.add_argument('--namespace', '-n', default='default', help='Kubernetes namespace (default: default)')
     parser.add_argument('--skip-visualizations', action='store_true', help='Skip generating visualization charts')
+    parser.add_argument('--adaptive', action='store_true', help='Use adaptive RPS testing (stops when system reaches limits)')
     
     args = parser.parse_args()
-    return args.title, args.invoker_dir, args.skip_tests, args.service, args.namespace, args.skip_visualizations
+    return args.title, args.invoker_dir, args.skip_tests, args.service, args.namespace, args.skip_visualizations, args.adaptive
 
 
 def main():
     """Main function."""
     try:
-        title, invoker_dir, skip_tests, service_name, namespace, skip_visualizations = parse_arguments()
+        title, invoker_dir, skip_tests, service_name, namespace, skip_visualizations, adaptive_mode = parse_arguments()
         
         # Create and run the test runner
-        runner = ComprehensiveTestRunner(title, invoker_dir, service_name, namespace, skip_visualizations)
+        runner = ComprehensiveTestRunner(title, invoker_dir, service_name, namespace, skip_visualizations, adaptive_mode)
         success = runner.run_complete_pipeline(skip_tests)
         
         if success:
