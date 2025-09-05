@@ -495,8 +495,11 @@ class ComprehensiveTestRunner:
                 return False, f"CAPACITY REACHED: {actual_rps:.1f} RPS achieved ({throughput_ratio*100:.1f}% of target {target_rps}), CPU: {cpu_utilization*100:.1f}%"
             elif is_infra_bottleneck:  # Infrastructure bottleneck - stop gracefully
                 return False, f"INFRASTRUCTURE LIMIT: {bottleneck_reason} - stopping to avoid error flood"
+            elif throughput_ratio < 0.6:  # Very low throughput - likely resource constraint
+                p99_latency_ms = stats.get('p99', 0) / 1000  # Convert μs to ms
+                return False, f"RESOURCE CONSTRAINT: Only {actual_rps:.1f} RPS achieved ({throughput_ratio*100:.1f}% of target {target_rps}), P99 = {p99_latency_ms:.1f}ms - likely resource limits"
             else:
-                # Throughput is low but unclear why - continue with warning
+                # Moderate throughput drop but unclear why - continue with warning for one more level
                 p99_latency_ms = stats.get('p99', 0) / 1000  # Convert μs to ms
                 print(f" ⚠️  Low throughput ({throughput_ratio*100:.1f}%) but CPU utilization is only {cpu_utilization*100:.1f}% - continuing...")
                 return True, f"⚠️  RPS {target_rps}: {actual_rps:.1f} actual RPS ({throughput_ratio*100:.1f}%), CPU: {cpu_utilization*100:.1f}%, P99 = {p99_latency_ms:.1f}ms"
@@ -1496,20 +1499,27 @@ class ComprehensiveTestRunner:
         
         if filename:
             import re
-            match = re.search(r'target_rps(\d+\.?\d*)_actual_rps(\d+\.?\d*)_lat\.csv', filename)
+            # Try the new filename format first: target_rps400.00_iter01_rps191.27_lat.csv
+            match = re.search(r'target_rps(\d+\.?\d*)_iter\d+_rps(\d+\.?\d*)_lat\.csv', filename)
             if match:
                 stats['target_rps'] = float(match.group(1))
                 stats['throughput_rps'] = float(match.group(2))
             else:
-                if test_duration_seconds:
-                    stats['throughput_rps'] = total_requests / test_duration_seconds
+                # Fallback to old format: target_rps400.00_actual_rps191.27_lat.csv
+                match = re.search(r'target_rps(\d+\.?\d*)_actual_rps(\d+\.?\d*)_lat\.csv', filename)
+                if match:
+                    stats['target_rps'] = float(match.group(1))
+                    stats['throughput_rps'] = float(match.group(2))
                 else:
-                    avg_latency_seconds = stats['average'] / 1000
-                    if avg_latency_seconds > 0:
-                        stats['throughput_rps'] = 1 / avg_latency_seconds
+                    if test_duration_seconds:
+                        stats['throughput_rps'] = total_requests / test_duration_seconds
                     else:
-                        stats['throughput_rps'] = 0
-                stats['target_rps'] = stats['throughput_rps']
+                        avg_latency_seconds = stats['average'] / 1000
+                        if avg_latency_seconds > 0:
+                            stats['throughput_rps'] = 1 / avg_latency_seconds
+                        else:
+                            stats['throughput_rps'] = 0
+                    stats['target_rps'] = stats['throughput_rps']
         else:
             if test_duration_seconds:
                 stats['throughput_rps'] = total_requests / test_duration_seconds

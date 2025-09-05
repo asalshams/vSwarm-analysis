@@ -203,7 +203,8 @@ class IndividualTestVisualizer:
                     runtime = parts[0]
                     test_type = '_'.join(parts[1:])
                     
-                    if runtime in RUNTIME_COLORS:
+                    # Filter for A-series only
+                    if runtime in RUNTIME_COLORS and test_type.startswith('a'):
                         test_dirs.append({
                             'directory': item,
                             'runtime': runtime,
@@ -585,12 +586,40 @@ class IndividualTestVisualizer:
     # MAIN EXECUTION FUNCTION
     # =========================================================================
 
-    def generate_all_individual_visualizations(self):
+    def generate_all_individual_visualizations(self, target_dir=None):
         """Generate all individual test visualizations."""
         print("\nStarting individual test visualization generation...")
         
-        # Find all test directories
-        test_dirs = self.find_all_test_directories()
+        if target_dir:
+            # Process specific directory only
+            print(f"Targeting specific directory: {target_dir}")
+            full_path = os.path.join(self.base_dir, target_dir)
+            if not os.path.exists(full_path):
+                print(f"Error: Directory {full_path} does not exist")
+                return
+            
+            # Extract runtime and test type from directory name
+            parts = target_dir.replace('results_fibonacci_', '').split('_')
+            if len(parts) >= 2:
+                runtime = parts[0]
+                test_type = '_'.join(parts[1:])
+                
+                if runtime in RUNTIME_COLORS:
+                    test_dirs = [{
+                        'directory': target_dir,
+                        'runtime': runtime,
+                        'test_type': test_type,
+                        'full_path': full_path
+                    }]
+                else:
+                    print(f"Error: Unknown runtime '{runtime}' in directory name")
+                    return
+            else:
+                print(f"Error: Could not parse directory name '{target_dir}'")
+                return
+        else:
+            # Find all test directories
+            test_dirs = self.find_all_test_directories()
         
         if not test_dirs:
             print("No test result directories found")
@@ -635,12 +664,13 @@ def main():
     
     parser = argparse.ArgumentParser(description='Generate individual test visualizations')
     parser.add_argument('--base-dir', default='.', help='Base directory containing results')
+    parser.add_argument('--target-dir', help='Specific results directory to process (e.g., results_fibonacci_python_a3)')
     
     args = parser.parse_args()
     
     # Create and run visualizer
     visualizer = IndividualTestVisualizer(args.base_dir)
-    visualizer.generate_all_individual_visualizations()
+    visualizer.generate_all_individual_visualizations(args.target_dir)
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,18 @@
+=== Fair Test Conditions ===
+Timestamp: 2025-09-04T17:32:52+01:00
+Title: fibonacci_python_b1
+Service: fibonacci-python-b1
+Scheduling: Native OS
+Load Threshold: 4.8
+Pre-test Load: 1.24
+Expected Pods: 1
+System State:
+  CPU Cores: 6
+  Available Memory: 10Gi
+  System Load: 1.24
+
+=== Post-Test Validation ===
+Test Completion: 2025-09-04T17:54:12+01:00
+Test Return Code: 0
+Final Pod Count: 0
+Final System Load: 3.57

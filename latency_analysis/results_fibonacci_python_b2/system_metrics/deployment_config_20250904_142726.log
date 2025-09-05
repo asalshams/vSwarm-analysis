@@ -1,0 +1,140 @@
+=== Deployment Configuration ===
+Timestamp: 2025-09-04T14:27:36+01:00
+Title: fibonacci_python_b2
+Service: fibonacci-python-b2
+Namespace: constrained-tests-b2
+Expected Pods: 2
+Actual Pods: 2
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-python-b2","namespace":"constrained-tests-b2"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"2","autoscaling.knative.dev/minScale":"2","autoscaling.knative.dev/target":"50","serving.knative.dev/containerConcurrency":"50"}},"spec":{"containerConcurrency":50,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-python","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"30m","memory":"64Mi"},"requests":{"cpu":"30m","memory":"64Mi"}}},{"args":["--addr=0.0.0.0","--port=50051"],"image":"docker.io/vhiveease/fibonacci-python:latest","name":"fibonacci-python","resources":{"limits":{"cpu":"500m","memory":"500Mi"},"requests":{"cpu":"500m","memory":"500Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-09-04T13:27:03Z"
+  generation: 1
+  name: fibonacci-python-b2
+  namespace: constrained-tests-b2
+  resourceVersion: "29107321"
+  uid: 8396955e-3e5b-46c1-938f-71a4d3b74be6
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "2"
+        autoscaling.knative.dev/minScale: "2"
+        autoscaling.knative.dev/target: "50"
+        serving.knative.dev/containerConcurrency: "50"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 50
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-python
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 30m
+            memory: 64Mi
+          requests:
+            cpu: 30m
+            memory: 64Mi
+      - args:
+        - --addr=0.0.0.0
+        - --port=50051
+        image: docker.io/vhiveease/fibonacci-python:latest
+        name: fibonacci-python
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 500m
+            memory: 500Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-python-b2.constrained-tests-b2.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-09-04T13:27:11Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-09-04T13:27:12Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-09-04T13:27:12Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-python-b2-00001
+  latestReadyRevisionName: fibonacci-python-b2-00001
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-python-b2-00001
+  url: http://fibonacci-python-b2.constrained-tests-b2.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                    READY   STATUS    RESTARTS   AGE   IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-python-b2-00001-deployment-6cc4b8c9fb-5jkfp   3/3     Running   0          30s   192.168.64.227   cloud-vm-43-24   <none>           <none>
+fibonacci-python-b2-00001-deployment-6cc4b8c9fb-k47hx   3/3     Running   0          30s   192.168.64.254   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-python-b2-00001-deployment-6cc4b8c9fb-5jkfp
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-b2-00001-deployment-6cc4b8c9fb-k47hx
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+

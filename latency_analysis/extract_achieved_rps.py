@@ -138,15 +138,20 @@ def find_results_directories(base_dir):
     Find all results directories that match the pattern 'results_fibonacci_*'
     """
     results_dirs = []
-    latency_analysis_dir = os.path.join(base_dir, 'latency_analysis')
     
-    if not os.path.exists(latency_analysis_dir):
-        print(f"Latency analysis directory not found: {latency_analysis_dir}")
+    # Check if we're already in the latency_analysis directory
+    if os.path.basename(base_dir) == 'latency_analysis':
+        search_dir = base_dir
+    else:
+        search_dir = os.path.join(base_dir, 'latency_analysis')
+    
+    if not os.path.exists(search_dir):
+        print(f"Directory not found: {search_dir}")
         return results_dirs
     
-    for item in os.listdir(latency_analysis_dir):
+    for item in os.listdir(search_dir):
         if item.startswith('results_fibonacci_'):
-            full_path = os.path.join(latency_analysis_dir, item)
+            full_path = os.path.join(search_dir, item)
             if os.path.isdir(full_path):
                 results_dirs.append(full_path)
     
