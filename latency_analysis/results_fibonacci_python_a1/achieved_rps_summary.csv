@@ -1,0 +1,12 @@
+target_rps,iter1_achieved,iter2_achieved,iter3_achieved,avg_achieved,min_achieved,max_achieved,efficiency_pct
+20.00,20.00,20.00,20.00,20.00,20.00,20.00,100.0
+40.00,32.10,30.15,31.63,31.29,30.15,32.10,78.2
+60.00,32.80,,,32.80,32.80,32.80,54.7
+
+=== MAXIMUM ACHIEVED RPS SUMMARY ===
+Metric,Value,Target_RPS
+Max Iter1,32.80,60.00
+Max Iter2,30.15,40.00
+Max Iter3,31.63,40.00
+Overall Max,32.80,60.00
+Avg of Max,31.53,

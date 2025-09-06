@@ -1,0 +1,12 @@
+=== Fair Test Conditions ===
+Timestamp: 2025-09-03T15:19:56+01:00
+Title: fibonacci_nodejs_a5_constrained
+Service: fibonacci-nodejs-a5-constrained
+Scheduling: Native OS
+Load Threshold: 4.8
+Pre-test Load: 1.16
+Expected Pods: 1
+System State:
+  CPU Cores: 6
+  Available Memory: 12Gi
+  System Load: 1.16

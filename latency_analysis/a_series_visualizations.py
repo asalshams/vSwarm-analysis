@@ -742,6 +742,7 @@ class ASeriesVisualizer:
                         fontsize=14, fontweight='bold', pad=20)
             ax.legend(fontsize=9, loc='best')
             ax.grid(True, alpha=0.3)
+            ax.set_ylim(0, 500)
             
             plt.tight_layout()
             
@@ -904,6 +905,1176 @@ class ASeriesVisualizer:
             print(f"      Error generating aggregated CSV: {e}")
 
     # =========================================================================
+    # COMPREHENSIVE RESOURCE SCALING ANALYSIS
+    # =========================================================================
+
+    def create_comprehensive_resource_scaling_analysis(self, all_runtime_data=None):
+        """Create comprehensive resource scaling analysis across all runtimes and configurations."""
+        print(f"\nCreating comprehensive resource scaling analysis")
+        
+        # Load resource data for all runtimes and configurations
+        resource_data = self._load_all_resource_data()
+        
+        if not resource_data:
+            print("  No resource data available")
+            return
+        
+        # Create configuration-aggregated analysis
+        if all_runtime_data:
+            self._create_configuration_aggregated_analysis(all_runtime_data, resource_data)
+        
+        # Create timeseries-style resource analysis
+        self._create_resource_timeseries_comparison(resource_data)
+        
+        # Create CPU scaling analysis
+        self._create_cpu_scaling_analysis(resource_data)
+        
+        # Create Memory scaling analysis
+        self._create_memory_scaling_analysis(resource_data)
+        
+        # Create Resource efficiency analysis
+        self._create_resource_efficiency_analysis(resource_data)
+        
+        # Create Resource utilization heatmap
+        self._create_resource_utilization_heatmap(resource_data)
+        
+        # Create per-pod resource scaling analysis
+        self._create_per_pod_resource_scaling_analysis(resource_data)
+
+    def _load_all_resource_data(self) -> Dict[str, Dict[str, pd.DataFrame]]:
+        """Load resource monitoring data for all runtimes and configurations."""
+        resource_data = {}
+        
+        for runtime in RUNTIME_ORDER:
+            resource_data[runtime] = {}
+            
+            # Find all A-series directories for this runtime
+            runtime_pattern = f"results_fibonacci_{runtime}_a"
+            runtime_dirs = [d for d in os.listdir(self.base_dir) if d.startswith(runtime_pattern)]
+            
+            for run_dir in sorted(runtime_dirs):
+                run_name = run_dir.split('_')[-1].upper()  # Extract A1, A2, etc.
+                
+                # Find pod monitoring file
+                pod_csv_path = os.path.join(self.base_dir, run_dir, f"fibonacci_{runtime}_{run_name.lower()}_pod_monitoring.csv")
+                
+                if not os.path.exists(pod_csv_path):
+                    # Try alternative naming patterns
+                    candidates = [
+                        os.path.join(self.base_dir, run_dir, f)
+                        for f in os.listdir(os.path.join(self.base_dir, run_dir))
+                        if f.endswith("_pod_monitoring.csv")
+                    ]
+                    if candidates:
+                        pod_csv_path = candidates[0]
+                    else:
+                        continue
+                
+                try:
+                    df = pd.read_csv(pod_csv_path)
+                    if 'timestamp' in df.columns:
+                        df['timestamp'] = pd.to_datetime(df['timestamp'])
+                        df = df.sort_values('timestamp')
+                    
+                    # Calculate resource metrics per pod
+                    if 'pod_count' in df.columns and 'cpu_usage_millicores' in df.columns:
+                        df['cpu_per_pod'] = df['cpu_usage_millicores'] / df['pod_count']
+                    if 'pod_count' in df.columns and 'memory_usage_mib' in df.columns:
+                        df['memory_per_pod'] = df['memory_usage_mib'] / df['pod_count']
+                    
+                    resource_data[runtime][run_name] = df
+                    print(f"  Loaded {runtime} {run_name}: {len(df)} data points")
+                    
+                except Exception as e:
+                    print(f"  Failed to load {runtime} {run_name}: {e}")
+                    continue
+        
+        return resource_data
+
+    def _create_configuration_aggregated_analysis(self, all_runtime_data: Dict[str, pd.DataFrame], resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create configuration-aggregated analysis showing each config across all runtimes."""
+        print(f"    Creating configuration-aggregated analysis")
+        
+        # Create charts for each configuration (A1, A2, A3, A4, A5)
+        for config in ["A1", "A2", "A3", "A4", "A5"]:
+            # Create config-specific directory
+            config_dir = os.path.join(self.output_dir, f"a{config[1]}")
+            os.makedirs(config_dir, exist_ok=True)
+            self._create_config_specific_analysis(config, all_runtime_data, resource_data, config_dir)
+
+    def _create_config_specific_analysis(self, config: str, all_runtime_data: Dict[str, pd.DataFrame], resource_data: Dict[str, Dict[str, pd.DataFrame]], config_dir: str):
+        """Create analysis for a specific configuration across all runtimes."""
+        print(f"      Creating {config} configuration analysis")
+        
+        # Create throughput comparison for this config
+        self._create_config_throughput_comparison(config, all_runtime_data, config_dir)
+        
+        # Create latency comparison for this config
+        self._create_config_latency_comparison(config, all_runtime_data, config_dir)
+        
+        # Create resource comparison for this config (per-pod)
+        self._create_config_resource_comparison(config, resource_data, config_dir)
+        
+        # Create per-pod resource comparison for this config
+        self._create_config_per_pod_resource_comparison(config, resource_data, config_dir)
+
+    def _create_config_throughput_comparison(self, config: str, all_runtime_data: Dict[str, pd.DataFrame], config_dir: str):
+        """Create throughput comparison for a specific configuration across all runtimes."""
+        print(f"        Creating {config} throughput comparison")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        for runtime in RUNTIME_ORDER:
+            if runtime in all_runtime_data:
+                data = all_runtime_data[runtime]
+                config_data = data[data['run'] == config]
+                
+                if not config_data.empty:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Use actual_rps if available, otherwise throughput_rps
+                    x_values = config_data['actual_rps'].fillna(config_data['throughput_rps']).values
+                    y_values = config_data['target_rps'].values
+                    
+                    ax.plot(y_values, x_values, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} Achieved", alpha=0.8)
+        
+        # Add 100% efficiency line
+        if not all_runtime_data:
+            return
+        max_target = max([data[data['run'] == config]['target_rps'].max() 
+                         for data in all_runtime_data.values() 
+                         if not data[data['run'] == config].empty])
+        ax.plot([0, max_target], [0, max_target], 'k--', alpha=0.5, label='100% Efficiency')
+        
+        config_info = RUN_CONFIG[config]
+        ax.set_xlabel('Target RPS', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Achieved RPS', fontsize=12, fontweight='bold')
+        ax.set_title(f'{config} Configuration - Throughput Comparison Across Runtimes\n'
+                    f'{config_info["container_cpu"]} CPU × {config_info["container_mem"]} Memory', 
+                    fontsize=14, fontweight='bold', pad=20)
+        ax.legend(fontsize=11)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        filename = f"throughput_comparison.png"
+        output_path = os.path.join(config_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"          Saved: {filename}")
+
+    def _create_config_latency_comparison(self, config: str, all_runtime_data: Dict[str, pd.DataFrame], config_dir: str):
+        """Create latency comparison for a specific configuration across all runtimes."""
+        print(f"        Creating {config} latency comparison")
+        
+        metrics = [
+            ('average', 'Average'),
+            ('p95', 'P95'),
+            ('p99', 'P99')
+        ]
+        
+        for metric_col, metric_label in metrics:
+            fig, ax = plt.subplots(figsize=(12, 8))
+            
+            for runtime in RUNTIME_ORDER:
+                if runtime in all_runtime_data:
+                    data = all_runtime_data[runtime]
+                    config_data = data[data['run'] == config]
+                    
+                    if not config_data.empty:
+                        color = RUNTIME_COLORS[runtime]['primary']
+                        label = RUNTIME_COLORS[runtime]['label']
+                        
+                        # Use actual_rps if available, otherwise throughput_rps
+                        x_values = config_data['actual_rps'].fillna(config_data['throughput_rps']).values
+                        # Convert microseconds to milliseconds
+                        y_values = config_data[metric_col].values / 1000
+                        
+                        ax.plot(x_values, y_values, 'o-', 
+                               color=color, linewidth=3, markersize=8, 
+                               label=label, alpha=0.8)
+            
+            config_info = RUN_CONFIG[config]
+            ax.set_xlabel('Achieved Throughput (RPS)', fontsize=12, fontweight='bold')
+            ax.set_ylabel(f'{metric_label} Latency (ms)', fontsize=12, fontweight='bold')
+            ax.set_title(f'{config} Configuration - {metric_label} Latency Comparison Across Runtimes\n'
+                        f'{config_info["container_cpu"]} CPU × {config_info["container_mem"]} Memory', 
+                        fontsize=14, fontweight='bold', pad=20)
+            ax.legend(fontsize=11)
+            ax.grid(True, alpha=0.3)
+            ax.set_yscale('log')
+            
+            plt.tight_layout()
+            
+            filename = f"latency_{metric_col}_comparison.png"
+            output_path = os.path.join(config_dir, filename)
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            print(f"          Saved: {filename}")
+
+    def _create_config_resource_comparison(self, config: str, resource_data: Dict[str, Dict[str, pd.DataFrame]], config_dir: str):
+        """Create per-pod resource comparison for a specific configuration across all runtimes."""
+        print(f"        Creating {config} per-pod resource comparison")
+        
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle(f'{config} Configuration - Per-Pod Resource Usage Comparison Across Runtimes\n'
+                    f'{RUN_CONFIG[config]["container_cpu"]} CPU × {RUN_CONFIG[config]["container_mem"]} Memory', 
+                    fontsize=16, fontweight='bold')
+        
+        # Get the number of pods for this configuration (A-series always has 1 pod)
+        num_pods = int(RUN_CONFIG[config]["pods"])
+        
+        # CPU Usage per Pod
+        ax1 = axes[0]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if 'cpu_usage_millicores' in data.columns and 'timestamp' in data.columns:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Calculate per-pod CPU usage
+                    cpu_per_pod = data['cpu_usage_millicores'] / num_pods
+                    
+                    # Normalize time to 0-100% for comparison
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax1.plot(time_normalized, cpu_per_pod, 
+                           color=color, linewidth=2, label=label, alpha=0.8)
+        
+        # Add theoretical CPU limit per pod
+        theoretical_cpu_per_pod = int(RUN_CONFIG[config]["container_cpu"].replace('m', ''))
+        ax1.axhline(y=theoretical_cpu_per_pod, color='red', linestyle='--', alpha=0.7, 
+                   label=f'Theoretical Limit ({theoretical_cpu_per_pod}m)')
+        
+        ax1.set_ylabel('CPU Usage per Pod (millicores)', fontsize=12, fontweight='bold')
+        ax1.set_title('CPU Usage per Pod Over Time', fontsize=14, fontweight='bold')
+        ax1.legend(fontsize=10)
+        ax1.grid(True, alpha=0.3)
+        ax1.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        # Memory Usage per Pod
+        ax2 = axes[1]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if 'memory_usage_mib' in data.columns and 'timestamp' in data.columns:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Calculate per-pod memory usage
+                    memory_per_pod = data['memory_usage_mib'] / num_pods
+                    
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax2.plot(time_normalized, memory_per_pod, 
+                           color=color, linewidth=2, label=label, alpha=0.8)
+        
+        # Add theoretical memory limit per pod (convert to MiB)
+        memory_limit_str = RUN_CONFIG[config]["container_mem"]
+        if memory_limit_str.endswith('Gi'):
+            theoretical_memory_per_pod = int(memory_limit_str.replace('Gi', '')) * 1024
+        elif memory_limit_str.endswith('Mi'):
+            theoretical_memory_per_pod = int(memory_limit_str.replace('Mi', ''))
+        else:
+            theoretical_memory_per_pod = 0
+        
+        if theoretical_memory_per_pod > 0:
+            ax2.axhline(y=theoretical_memory_per_pod, color='red', linestyle='--', alpha=0.7, 
+                       label=f'Theoretical Limit ({memory_limit_str})')
+        
+        ax2.set_ylabel('Memory Usage per Pod (MiB)', fontsize=12, fontweight='bold')
+        ax2.set_title('Memory Usage per Pod Over Time', fontsize=14, fontweight='bold')
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3)
+        ax2.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        # Pod Count
+        ax3 = axes[2]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if 'pod_count' in data.columns and 'timestamp' in data.columns:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax3.plot(time_normalized, data['pod_count'], 
+                           color=color, linewidth=2, label=label, alpha=0.8, 
+                           marker='o', markersize=3)
+        
+        ax3.set_ylabel('Pod Count', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        ax3.set_title('Pod Count Over Time', fontsize=14, fontweight='bold')
+        ax3.legend(fontsize=10)
+        ax3.grid(True, alpha=0.3)
+        ax3.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        filename = f"resource_comparison.png"
+        output_path = os.path.join(config_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"          Saved: {filename}")
+
+    def _create_config_per_pod_resource_comparison(self, config: str, resource_data: Dict[str, Dict[str, pd.DataFrame]], config_dir: str):
+        """Create per-pod resource comparison for a specific configuration across all runtimes."""
+        print(f"        Creating {config} per-pod resource comparison")
+        
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle(f'{config} Configuration - Per-Pod Resource Usage Comparison Across Runtimes\n'
+                    f'{RUN_CONFIG[config]["container_cpu"]} CPU × {RUN_CONFIG[config]["container_mem"]} Memory', 
+                    fontsize=16, fontweight='bold')
+        
+        # Get the number of pods for this configuration (A-series always has 1 pod)
+        num_pods = int(RUN_CONFIG[config]["pods"])
+        
+        # CPU Usage per Pod
+        ax1 = axes[0]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if 'cpu_usage_millicores' in data.columns and 'timestamp' in data.columns:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Calculate per-pod CPU usage
+                    cpu_per_pod = data['cpu_usage_millicores'] / num_pods
+                    
+                    # Normalize time to 0-100% for comparison
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax1.plot(time_normalized, cpu_per_pod, 
+                           color=color, linewidth=2, label=label, alpha=0.8)
+        
+        # Add theoretical CPU limit per pod
+        theoretical_cpu_per_pod = int(RUN_CONFIG[config]["container_cpu"].replace('m', ''))
+        ax1.axhline(y=theoretical_cpu_per_pod, color='red', linestyle='--', alpha=0.7, 
+                   label=f'Theoretical Limit ({theoretical_cpu_per_pod}m)')
+        
+        ax1.set_ylabel('CPU Usage per Pod (millicores)', fontsize=12, fontweight='bold')
+        ax1.set_title('CPU Usage per Pod Over Time', fontsize=14, fontweight='bold')
+        ax1.legend(fontsize=10)
+        ax1.grid(True, alpha=0.3)
+        ax1.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        # Memory Usage per Pod
+        ax2 = axes[1]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if 'memory_usage_mib' in data.columns and 'timestamp' in data.columns:
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Calculate per-pod memory usage
+                    memory_per_pod = data['memory_usage_mib'] / num_pods
+                    
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax2.plot(time_normalized, memory_per_pod, 
+                           color=color, linewidth=2, label=label, alpha=0.8)
+        
+        # Add theoretical memory limit per pod (convert to MiB)
+        memory_limit_str = RUN_CONFIG[config]["container_mem"]
+        if memory_limit_str.endswith('Gi'):
+            theoretical_memory_per_pod = int(memory_limit_str.replace('Gi', '')) * 1024
+        elif memory_limit_str.endswith('Mi'):
+            theoretical_memory_per_pod = int(memory_limit_str.replace('Mi', ''))
+        else:
+            theoretical_memory_per_pod = 0
+        
+        if theoretical_memory_per_pod > 0:
+            ax2.axhline(y=theoretical_memory_per_pod, color='red', linestyle='--', alpha=0.7, 
+                       label=f'Theoretical Limit ({memory_limit_str})')
+        
+        ax2.set_ylabel('Memory Usage per Pod (MiB)', fontsize=12, fontweight='bold')
+        ax2.set_title('Memory Usage per Pod Over Time', fontsize=14, fontweight='bold')
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3)
+        ax2.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        # Resource Efficiency per Pod
+        ax3 = axes[2]
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data and config in resource_data[runtime]:
+                data = resource_data[runtime][config]
+                if ('cpu_usage_millicores' in data.columns and 'memory_usage_mib' in data.columns 
+                    and 'timestamp' in data.columns):
+                    color = RUNTIME_COLORS[runtime]['primary']
+                    label = RUNTIME_COLORS[runtime]['label']
+                    
+                    # Calculate resource efficiency (CPU + Memory combined)
+                    cpu_per_pod = data['cpu_usage_millicores'] / num_pods
+                    memory_per_pod = data['memory_usage_mib'] / num_pods
+                    
+                    # Calculate efficiency as percentage of theoretical limits
+                    cpu_efficiency = (cpu_per_pod / theoretical_cpu_per_pod) * 100
+                    memory_efficiency = (memory_per_pod / theoretical_memory_per_pod) * 100 if theoretical_memory_per_pod > 0 else 0
+                    
+                    # Combined efficiency (average of CPU and Memory)
+                    combined_efficiency = (cpu_efficiency + memory_efficiency) / 2
+                    
+                    time_normalized = np.linspace(0, 100, len(data))
+                    ax3.plot(time_normalized, combined_efficiency, 
+                           color=color, linewidth=2, label=label, alpha=0.8)
+        
+        ax3.set_ylabel('Resource Efficiency per Pod (%)', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        ax3.set_title('Resource Efficiency per Pod Over Time', fontsize=14, fontweight='bold')
+        ax3.legend(fontsize=10)
+        ax3.grid(True, alpha=0.3)
+        ax3.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        ax3.axhline(y=100, color='red', linestyle='--', alpha=0.7, label='100% Efficiency')
+        ax3.set_ylim(0, 120)  # Allow some headroom above 100%
+        
+        plt.tight_layout()
+        
+        filename = f"per_pod_resource_comparison.png"
+        output_path = os.path.join(config_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"          Saved: {filename}")
+
+    def _create_resource_timeseries_comparison(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create timeseries-style resource comparison across all runtimes and configurations."""
+        print(f"    Creating resource timeseries comparison")
+        
+        # Create CPU timeseries comparison
+        self._create_cpu_timeseries_comparison(resource_data)
+        
+        # Create Memory timeseries comparison
+        self._create_memory_timeseries_comparison(resource_data)
+        
+        # Create Pod count timeseries comparison
+        self._create_pod_count_timeseries_comparison(resource_data)
+
+    def _create_cpu_timeseries_comparison(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create CPU timeseries comparison across all runtimes and configurations."""
+        print(f"      Creating CPU timeseries comparison")
+        
+        # Create aggregated version
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle('A-Series CPU Usage Timeseries Comparison (Aggregated)\nResource Scaling Analysis Across All Runtimes and Configurations', 
+                     fontsize=16, fontweight='bold')
+        
+        for i, runtime in enumerate(RUNTIME_ORDER):
+            if runtime in resource_data:
+                ax = axes[i]
+                color = RUNTIME_COLORS[runtime]['primary']
+                runtime_label = RUNTIME_COLORS[runtime]['label']
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'cpu_usage_millicores' in data.columns and 'timestamp' in data.columns:
+                            config = RUN_CONFIG[run]
+                            label = f"{run} | {config['container_cpu']}"
+                            
+                            # Normalize time to 0-100% for comparison
+                            time_normalized = np.linspace(0, 100, len(data))
+                            ax.plot(time_normalized, data['cpu_usage_millicores'], 
+                                   label=label, linewidth=2, alpha=0.8)
+                
+                ax.set_ylabel('CPU Usage (millicores)', fontsize=12, fontweight='bold')
+                ax.set_title(f'{runtime_label} CPU Usage Over Time', fontsize=14, fontweight='bold')
+                ax.legend(loc='best', fontsize=9, ncol=2)
+                ax.grid(True, alpha=0.3)
+                ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        axes[-1].set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        plt.tight_layout()
+        
+        filename = "a_series_cpu_timeseries_comparison.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+        
+        # Create per-pod version
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle('A-Series CPU Usage per Pod Timeseries Comparison\nResource Scaling Analysis Across All Runtimes and Configurations', 
+                     fontsize=16, fontweight='bold')
+        
+        for i, runtime in enumerate(RUNTIME_ORDER):
+            if runtime in resource_data:
+                ax = axes[i]
+                color = RUNTIME_COLORS[runtime]['primary']
+                runtime_label = RUNTIME_COLORS[runtime]['label']
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'cpu_usage_millicores' in data.columns and 'timestamp' in data.columns:
+                            config = RUN_CONFIG[run]
+                            num_pods = int(config['pods'])
+                            
+                            # Calculate per-pod CPU usage
+                            cpu_per_pod = data['cpu_usage_millicores'] / num_pods
+                            
+                            label = f"{run} | {config['container_cpu']} per pod"
+                            
+                            # Normalize time to 0-100% for comparison
+                            time_normalized = np.linspace(0, 100, len(data))
+                            ax.plot(time_normalized, cpu_per_pod, 
+                                   label=label, linewidth=2, alpha=0.8)
+                
+                ax.set_ylabel('CPU Usage per Pod (millicores)', fontsize=12, fontweight='bold')
+                ax.set_title(f'{runtime_label} CPU Usage per Pod Over Time', fontsize=14, fontweight='bold')
+                ax.legend(loc='best', fontsize=9, ncol=2)
+                ax.grid(True, alpha=0.3)
+                ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        axes[-1].set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        plt.tight_layout()
+        
+        filename = "a_series_cpu_per_pod_timeseries_comparison.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+
+    def _create_memory_timeseries_comparison(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create Memory timeseries comparison across all runtimes and configurations."""
+        print(f"      Creating Memory timeseries comparison")
+        
+        # Create aggregated version
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle('A-Series Memory Usage Timeseries Comparison (Aggregated)\nResource Scaling Analysis Across All Runtimes and Configurations', 
+                     fontsize=16, fontweight='bold')
+        
+        for i, runtime in enumerate(RUNTIME_ORDER):
+            if runtime in resource_data:
+                ax = axes[i]
+                color = RUNTIME_COLORS[runtime]['primary']
+                runtime_label = RUNTIME_COLORS[runtime]['label']
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'memory_usage_mib' in data.columns and 'timestamp' in data.columns:
+                            config = RUN_CONFIG[run]
+                            label = f"{run} | {config['container_mem']}"
+                            
+                            # Normalize time to 0-100% for comparison
+                            time_normalized = np.linspace(0, 100, len(data))
+                            ax.plot(time_normalized, data['memory_usage_mib'], 
+                                   label=label, linewidth=2, alpha=0.8)
+                
+                ax.set_ylabel('Memory Usage (MiB)', fontsize=12, fontweight='bold')
+                ax.set_title(f'{runtime_label} Memory Usage Over Time', fontsize=14, fontweight='bold')
+                ax.legend(loc='best', fontsize=9, ncol=2)
+                ax.grid(True, alpha=0.3)
+                ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        axes[-1].set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        plt.tight_layout()
+        
+        filename = "a_series_memory_timeseries_comparison.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+        
+        # Create per-pod version
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle('A-Series Memory Usage per Pod Timeseries Comparison\nResource Scaling Analysis Across All Runtimes and Configurations', 
+                     fontsize=16, fontweight='bold')
+        
+        for i, runtime in enumerate(RUNTIME_ORDER):
+            if runtime in resource_data:
+                ax = axes[i]
+                color = RUNTIME_COLORS[runtime]['primary']
+                runtime_label = RUNTIME_COLORS[runtime]['label']
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'memory_usage_mib' in data.columns and 'timestamp' in data.columns:
+                            config = RUN_CONFIG[run]
+                            num_pods = int(config['pods'])
+                            
+                            # Calculate per-pod memory usage
+                            memory_per_pod = data['memory_usage_mib'] / num_pods
+                            
+                            label = f"{run} | {config['container_mem']} per pod"
+                            
+                            # Normalize time to 0-100% for comparison
+                            time_normalized = np.linspace(0, 100, len(data))
+                            ax.plot(time_normalized, memory_per_pod, 
+                                   label=label, linewidth=2, alpha=0.8)
+                
+                ax.set_ylabel('Memory Usage per Pod (MiB)', fontsize=12, fontweight='bold')
+                ax.set_title(f'{runtime_label} Memory Usage per Pod Over Time', fontsize=14, fontweight='bold')
+                ax.legend(loc='best', fontsize=9, ncol=2)
+                ax.grid(True, alpha=0.3)
+                ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        axes[-1].set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        plt.tight_layout()
+        
+        filename = "a_series_memory_per_pod_timeseries_comparison.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+
+    def _create_pod_count_timeseries_comparison(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create Pod count timeseries comparison across all runtimes and configurations."""
+        print(f"      Creating Pod count timeseries comparison")
+        
+        fig, axes = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+        fig.suptitle('A-Series Pod Count Timeseries Comparison\nResource Scaling Analysis Across All Runtimes and Configurations', 
+                     fontsize=16, fontweight='bold')
+        
+        for i, runtime in enumerate(RUNTIME_ORDER):
+            if runtime in resource_data:
+                ax = axes[i]
+                color = RUNTIME_COLORS[runtime]['primary']
+                runtime_label = RUNTIME_COLORS[runtime]['label']
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'pod_count' in data.columns and 'timestamp' in data.columns:
+                            config = RUN_CONFIG[run]
+                            label = f"{run} | {config['container_cpu']}"
+                            
+                            # Normalize time to 0-100% for comparison
+                            time_normalized = np.linspace(0, 100, len(data))
+                            ax.plot(time_normalized, data['pod_count'], 
+                                   label=label, linewidth=2, alpha=0.8, marker='o', markersize=3)
+                
+                ax.set_ylabel('Pod Count', fontsize=12, fontweight='bold')
+                ax.set_title(f'{runtime_label} Pod Count Over Time', fontsize=14, fontweight='bold')
+                ax.legend(loc='best', fontsize=9, ncol=2)
+                ax.grid(True, alpha=0.3)
+                ax.axhline(y=0, color='black', linewidth=0.5, alpha=0.3)
+        
+        axes[-1].set_xlabel('Test Progress (%)', fontsize=12, fontweight='bold')
+        plt.tight_layout()
+        
+        filename = "a_series_pod_count_timeseries_comparison.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+
+    def _create_cpu_scaling_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create CPU scaling analysis across all configurations."""
+        print(f"    Creating CPU scaling analysis")
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        
+        # Plot 1: CPU usage vs configuration
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                color = RUNTIME_COLORS[runtime]['primary']
+                label = RUNTIME_COLORS[runtime]['label']
+                
+                configs = []
+                avg_cpu_totals = []
+                avg_cpu_per_pod = []
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'cpu_usage_millicores' in data.columns and 'pod_count' in data.columns:
+                            # Calculate average CPU usage
+                            avg_cpu_total = data['cpu_usage_millicores'].mean()
+                            avg_cpu_per_pod_val = data['cpu_per_pod'].mean() if 'cpu_per_pod' in data.columns else avg_cpu_total / data['pod_count'].mean()
+                            
+                            configs.append(run)
+                            avg_cpu_totals.append(avg_cpu_total)
+                            avg_cpu_per_pod.append(avg_cpu_per_pod_val)
+                
+                if configs:
+                    config_indices = [1, 2, 3, 4, 5]  # A1=1, A2=2, etc.
+                    ax1.plot(config_indices, avg_cpu_totals, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} Total CPU", alpha=0.8)
+                    ax2.plot(config_indices, avg_cpu_per_pod, 's--', 
+                           color=color, linewidth=2, markersize=6, 
+                           label=f"{label} CPU per Pod", alpha=0.8)
+        
+        # Customize plot 1 (Total CPU)
+        ax1.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('Total CPU Usage (millicores)', fontsize=12, fontweight='bold')
+        ax1.set_title('A-Series CPU Scaling Analysis\nTotal CPU Usage Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax1.set_xticks([1, 2, 3, 4, 5])
+        ax1.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax1.legend(fontsize=10)
+        ax1.grid(True, alpha=0.3)
+        
+        # Add configuration details
+        config_text = "Configuration Details:\n"
+        config_text += "A1: 1 pod × 1000m CPU\n"
+        config_text += "A2: 1 pod × 500m CPU\n"
+        config_text += "A3: 1 pod × 250m CPU\n"
+        config_text += "A4: 1 pod × 125m CPU\n"
+        config_text += "A5: 1 pod × 100m CPU"
+        
+        ax1.text(0.02, 0.98, config_text, transform=ax1.transAxes, 
+                fontsize=9, verticalalignment='top', horizontalalignment='left',
+                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.8))
+        
+        # Customize plot 2 (CPU per Pod)
+        ax2.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('CPU Usage per Pod (millicores)', fontsize=12, fontweight='bold')
+        ax2.set_title('A-Series CPU Efficiency Analysis\nCPU Usage per Pod Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax2.set_xticks([1, 2, 3, 4, 5])
+        ax2.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3)
+        
+        # Add theoretical limits
+        theoretical_limits = [1000, 500, 250, 125, 100]  # CPU limits per pod
+        ax2.plot([1, 2, 3, 4, 5], theoretical_limits, 'k--', alpha=0.5, 
+                linewidth=2, label='Theoretical CPU Limit')
+        ax2.legend(fontsize=10)
+        
+        plt.tight_layout()
+        
+        filename = "a_series_cpu_scaling_analysis.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"      Saved: {filename}")
+
+    def _create_memory_scaling_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create Memory scaling analysis across all configurations."""
+        print(f"    Creating Memory scaling analysis")
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        
+        # Plot 1: Memory usage vs configuration
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                color = RUNTIME_COLORS[runtime]['primary']
+                label = RUNTIME_COLORS[runtime]['label']
+                
+                configs = []
+                avg_memory_totals = []
+                avg_memory_per_pod = []
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'memory_usage_mib' in data.columns and 'pod_count' in data.columns:
+                            # Calculate average memory usage
+                            avg_memory_total = data['memory_usage_mib'].mean()
+                            avg_memory_per_pod_val = data['memory_per_pod'].mean() if 'memory_per_pod' in data.columns else avg_memory_total / data['pod_count'].mean()
+                            
+                            configs.append(run)
+                            avg_memory_totals.append(avg_memory_total)
+                            avg_memory_per_pod.append(avg_memory_per_pod_val)
+                
+                if configs:
+                    config_indices = [1, 2, 3, 4, 5]  # A1=1, A2=2, etc.
+                    ax1.plot(config_indices, avg_memory_totals, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} Total Memory", alpha=0.8)
+                    ax2.plot(config_indices, avg_memory_per_pod, 's--', 
+                           color=color, linewidth=2, markersize=6, 
+                           label=f"{label} Memory per Pod", alpha=0.8)
+        
+        # Customize plot 1 (Total Memory)
+        ax1.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('Total Memory Usage (MiB)', fontsize=12, fontweight='bold')
+        ax1.set_title('A-Series Memory Scaling Analysis\nTotal Memory Usage Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax1.set_xticks([1, 2, 3, 4, 5])
+        ax1.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax1.legend(fontsize=10)
+        ax1.grid(True, alpha=0.3)
+        
+        # Add configuration details
+        config_text = "Configuration Details:\n"
+        config_text += "A1: 1 pod × 1Gi Memory\n"
+        config_text += "A2: 1 pod × 500Mi Memory\n"
+        config_text += "A3: 1 pod × 250Mi Memory\n"
+        config_text += "A4: 1 pod × 125Mi Memory\n"
+        config_text += "A5: 1 pod × 100Mi Memory"
+        
+        ax1.text(0.02, 0.98, config_text, transform=ax1.transAxes, 
+                fontsize=9, verticalalignment='top', horizontalalignment='left',
+                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgreen", alpha=0.8))
+        
+        # Customize plot 2 (Memory per Pod)
+        ax2.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('Memory Usage per Pod (MiB)', fontsize=12, fontweight='bold')
+        ax2.set_title('A-Series Memory Efficiency Analysis\nMemory Usage per Pod Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax2.set_xticks([1, 2, 3, 4, 5])
+        ax2.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3)
+        
+        # Add theoretical limits (convert Gi to MiB)
+        theoretical_limits = [1024, 512, 256, 128, 102]  # Memory limits per pod in MiB
+        ax2.plot([1, 2, 3, 4, 5], theoretical_limits, 'k--', alpha=0.5, 
+                linewidth=2, label='Theoretical Memory Limit')
+        ax2.legend(fontsize=10)
+        
+        plt.tight_layout()
+        
+        filename = "a_series_memory_scaling_analysis.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"      Saved: {filename}")
+
+    def _create_resource_efficiency_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create resource efficiency analysis comparing actual vs theoretical usage."""
+        print(f"    Creating resource efficiency analysis")
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        
+        # CPU and Memory theoretical limits
+        cpu_limits = [1000, 500, 250, 125, 100]  # millicores per pod
+        memory_limits = [1024, 512, 256, 128, 102]  # MiB per pod
+        
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                color = RUNTIME_COLORS[runtime]['primary']
+                label = RUNTIME_COLORS[runtime]['label']
+                
+                cpu_efficiency = []
+                memory_efficiency = []
+                
+                for i, run in enumerate(["A1", "A2", "A3", "A4", "A5"]):
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        
+                        # Calculate CPU efficiency
+                        if 'cpu_per_pod' in data.columns:
+                            avg_cpu_per_pod = data['cpu_per_pod'].mean()
+                            cpu_eff = (avg_cpu_per_pod / cpu_limits[i]) * 100
+                            cpu_efficiency.append(cpu_eff)
+                        
+                        # Calculate Memory efficiency
+                        if 'memory_per_pod' in data.columns:
+                            avg_memory_per_pod = data['memory_per_pod'].mean()
+                            memory_eff = (avg_memory_per_pod / memory_limits[i]) * 100
+                            memory_efficiency.append(memory_eff)
+                
+                if cpu_efficiency:
+                    config_indices = [1, 2, 3, 4, 5]
+                    ax1.plot(config_indices, cpu_efficiency, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} CPU Efficiency", alpha=0.8)
+                
+                if memory_efficiency:
+                    ax2.plot(config_indices, memory_efficiency, 's--', 
+                           color=color, linewidth=2, markersize=6, 
+                           label=f"{label} Memory Efficiency", alpha=0.8)
+        
+        # Customize CPU efficiency plot
+        ax1.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('CPU Efficiency (%)', fontsize=12, fontweight='bold')
+        ax1.set_title('A-Series CPU Resource Efficiency\nActual vs Theoretical CPU Usage per Pod', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax1.set_xticks([1, 2, 3, 4, 5])
+        ax1.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax1.legend(fontsize=10)
+        ax1.grid(True, alpha=0.3)
+        ax1.set_ylim(0, 100)
+        
+        # Add efficiency zones
+        ax1.axhspan(0, 25, alpha=0.1, color='red', label='Low Efficiency')
+        ax1.axhspan(25, 75, alpha=0.1, color='yellow', label='Medium Efficiency')
+        ax1.axhspan(75, 100, alpha=0.1, color='green', label='High Efficiency')
+        
+        # Customize Memory efficiency plot
+        ax2.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('Memory Efficiency (%)', fontsize=12, fontweight='bold')
+        ax2.set_title('A-Series Memory Resource Efficiency\nActual vs Theoretical Memory Usage per Pod', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax2.set_xticks([1, 2, 3, 4, 5])
+        ax2.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3)
+        ax2.set_ylim(0, 100)
+        
+        # Add efficiency zones
+        ax2.axhspan(0, 25, alpha=0.1, color='red', label='Low Efficiency')
+        ax2.axhspan(25, 75, alpha=0.1, color='yellow', label='Medium Efficiency')
+        ax2.axhspan(75, 100, alpha=0.1, color='green', label='High Efficiency')
+        
+        plt.tight_layout()
+        
+        filename = "a_series_resource_efficiency_analysis.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"      Saved: {filename}")
+
+    def _create_resource_utilization_heatmap(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create resource utilization heatmap across runtimes and configurations."""
+        print(f"    Creating resource utilization heatmap")
+        
+        # Prepare data for heatmap
+        runtimes = []
+        configs = ['A1', 'A2', 'A3', 'A4', 'A5']
+        cpu_matrix = []
+        memory_matrix = []
+        
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                runtimes.append(RUNTIME_COLORS[runtime]['label'])
+                cpu_row = []
+                memory_row = []
+                
+                for run in configs:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        
+                        # Calculate average resource usage per pod
+                        if 'cpu_per_pod' in data.columns:
+                            avg_cpu = data['cpu_per_pod'].mean()
+                        else:
+                            avg_cpu = 0
+                        
+                        if 'memory_per_pod' in data.columns:
+                            avg_memory = data['memory_per_pod'].mean()
+                        else:
+                            avg_memory = 0
+                        
+                        cpu_row.append(avg_cpu)
+                        memory_row.append(avg_memory)
+                    else:
+                        cpu_row.append(0)
+                        memory_row.append(0)
+                
+                cpu_matrix.append(cpu_row)
+                memory_matrix.append(memory_row)
+        
+        if not cpu_matrix or not memory_matrix:
+            print("      No data available for heatmap")
+            return
+        
+        # Create heatmap
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+        
+        # CPU heatmap
+        im1 = ax1.imshow(cpu_matrix, cmap='YlOrRd', aspect='auto')
+        ax1.set_xticks(range(len(configs)))
+        ax1.set_xticklabels(configs)
+        ax1.set_yticks(range(len(runtimes)))
+        ax1.set_yticklabels(runtimes)
+        ax1.set_xlabel('Configuration', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('Runtime', fontsize=12, fontweight='bold')
+        ax1.set_title('CPU Usage per Pod (millicores)\nResource Utilization Heatmap', 
+                     fontsize=14, fontweight='bold', pad=20)
+        
+        # Add text annotations for CPU
+        for i in range(len(runtimes)):
+            for j in range(len(configs)):
+                text = ax1.text(j, i, f'{cpu_matrix[i][j]:.0f}',
+                               ha="center", va="center", color="black", fontweight='bold')
+        
+        # Add colorbar for CPU
+        cbar1 = plt.colorbar(im1, ax=ax1)
+        cbar1.set_label('CPU (millicores)', fontsize=10)
+        
+        # Memory heatmap
+        im2 = ax2.imshow(memory_matrix, cmap='Blues', aspect='auto')
+        ax2.set_xticks(range(len(configs)))
+        ax2.set_xticklabels(configs)
+        ax2.set_yticks(range(len(runtimes)))
+        ax2.set_yticklabels(runtimes)
+        ax2.set_xlabel('Configuration', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('Runtime', fontsize=12, fontweight='bold')
+        ax2.set_title('Memory Usage per Pod (MiB)\nResource Utilization Heatmap', 
+                     fontsize=14, fontweight='bold', pad=20)
+        
+        # Add text annotations for Memory
+        for i in range(len(runtimes)):
+            for j in range(len(configs)):
+                text = ax2.text(j, i, f'{memory_matrix[i][j]:.0f}',
+                               ha="center", va="center", color="white", fontweight='bold')
+        
+        # Add colorbar for Memory
+        cbar2 = plt.colorbar(im2, ax=ax2)
+        cbar2.set_label('Memory (MiB)', fontsize=10)
+        
+        plt.tight_layout()
+        
+        filename = "a_series_resource_utilization_heatmap.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"      Saved: {filename}")
+
+    def _create_per_pod_resource_scaling_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create per-pod resource scaling analysis across all configurations."""
+        print(f"    Creating per-pod resource scaling analysis")
+        
+        # Create per-pod CPU scaling analysis
+        self._create_per_pod_cpu_scaling_analysis(resource_data)
+        
+        # Create per-pod Memory scaling analysis
+        self._create_per_pod_memory_scaling_analysis(resource_data)
+
+    def _create_per_pod_cpu_scaling_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create per-pod CPU scaling analysis across all configurations."""
+        print(f"      Creating per-pod CPU scaling analysis")
+        
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                color = RUNTIME_COLORS[runtime]['primary']
+                label = RUNTIME_COLORS[runtime]['label']
+                
+                configs = []
+                avg_cpu_per_pod = []
+                theoretical_limits = []
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'cpu_usage_millicores' in data.columns and 'pod_count' in data.columns:
+                            # Calculate average CPU usage per pod
+                            num_pods = int(RUN_CONFIG[run]["pods"])
+                            avg_cpu_total = data['cpu_usage_millicores'].mean()
+                            avg_cpu_per_pod_val = avg_cpu_total / num_pods
+                            
+                            configs.append(run)
+                            avg_cpu_per_pod.append(avg_cpu_per_pod_val)
+                            theoretical_limits.append(int(RUN_CONFIG[run]["container_cpu"].replace('m', '')))
+                
+                if configs:
+                    config_indices = [1, 2, 3, 4, 5]  # A1=1, A2=2, etc.
+                    ax.plot(config_indices, avg_cpu_per_pod, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} Actual", alpha=0.8)
+                    ax.plot(config_indices, theoretical_limits, 's--', 
+                           color=color, linewidth=2, markersize=6, 
+                           label=f"{label} Theoretical", alpha=0.6)
+        
+        ax.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('CPU Usage per Pod (millicores)', fontsize=12, fontweight='bold')
+        ax.set_title('A-Series Per-Pod CPU Scaling Analysis\nCPU Usage per Pod Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax.set_xticks([1, 2, 3, 4, 5])
+        ax.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax.legend(fontsize=10, ncol=2)
+        ax.grid(True, alpha=0.3)
+        
+        # Add configuration details
+        config_text = "Configuration Details:\n"
+        config_text += "A1: 1 pod × 1000m CPU\n"
+        config_text += "A2: 1 pod × 500m CPU\n"
+        config_text += "A3: 1 pod × 250m CPU\n"
+        config_text += "A4: 1 pod × 125m CPU\n"
+        config_text += "A5: 1 pod × 100m CPU"
+        
+        ax.text(0.02, 0.98, config_text, transform=ax.transAxes, 
+                fontsize=9, verticalalignment='top', horizontalalignment='left',
+                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.8))
+        
+        plt.tight_layout()
+        
+        filename = "a_series_per_pod_cpu_scaling_analysis.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+
+    def _create_per_pod_memory_scaling_analysis(self, resource_data: Dict[str, Dict[str, pd.DataFrame]]):
+        """Create per-pod Memory scaling analysis across all configurations."""
+        print(f"      Creating per-pod Memory scaling analysis")
+        
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        for runtime in RUNTIME_ORDER:
+            if runtime in resource_data:
+                color = RUNTIME_COLORS[runtime]['primary']
+                label = RUNTIME_COLORS[runtime]['label']
+                
+                configs = []
+                avg_memory_per_pod = []
+                theoretical_limits = []
+                
+                for run in ["A1", "A2", "A3", "A4", "A5"]:
+                    if run in resource_data[runtime]:
+                        data = resource_data[runtime][run]
+                        if 'memory_usage_mib' in data.columns and 'pod_count' in data.columns:
+                            # Calculate average memory usage per pod
+                            num_pods = int(RUN_CONFIG[run]["pods"])
+                            avg_memory_total = data['memory_usage_mib'].mean()
+                            avg_memory_per_pod_val = avg_memory_total / num_pods
+                            
+                            configs.append(run)
+                            avg_memory_per_pod.append(avg_memory_per_pod_val)
+                            
+                            # Convert theoretical limit to MiB
+                            memory_limit_str = RUN_CONFIG[run]["container_mem"]
+                            if memory_limit_str.endswith('Gi'):
+                                theoretical_limit = int(memory_limit_str.replace('Gi', '')) * 1024
+                            elif memory_limit_str.endswith('Mi'):
+                                theoretical_limit = int(memory_limit_str.replace('Mi', ''))
+                            else:
+                                theoretical_limit = 0
+                            theoretical_limits.append(theoretical_limit)
+                
+                if configs:
+                    config_indices = [1, 2, 3, 4, 5]  # A1=1, A2=2, etc.
+                    ax.plot(config_indices, avg_memory_per_pod, 'o-', 
+                           color=color, linewidth=3, markersize=8, 
+                           label=f"{label} Actual", alpha=0.8)
+                    ax.plot(config_indices, theoretical_limits, 's--', 
+                           color=color, linewidth=2, markersize=6, 
+                           label=f"{label} Theoretical", alpha=0.6)
+        
+        ax.set_xlabel('Configuration (A1 → A5)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Memory Usage per Pod (MiB)', fontsize=12, fontweight='bold')
+        ax.set_title('A-Series Per-Pod Memory Scaling Analysis\nMemory Usage per Pod Across Configurations', 
+                     fontsize=14, fontweight='bold', pad=20)
+        ax.set_xticks([1, 2, 3, 4, 5])
+        ax.set_xticklabels(['A1', 'A2', 'A3', 'A4', 'A5'])
+        ax.legend(fontsize=10, ncol=2)
+        ax.grid(True, alpha=0.3)
+        
+        # Add configuration details
+        config_text = "Configuration Details:\n"
+        config_text += "A1: 1 pod × 1Gi Memory\n"
+        config_text += "A2: 1 pod × 500Mi Memory\n"
+        config_text += "A3: 1 pod × 250Mi Memory\n"
+        config_text += "A4: 1 pod × 125Mi Memory\n"
+        config_text += "A5: 1 pod × 100Mi Memory"
+        
+        ax.text(0.02, 0.98, config_text, transform=ax.transAxes, 
+                fontsize=9, verticalalignment='top', horizontalalignment='left',
+                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgreen", alpha=0.8))
+        
+        plt.tight_layout()
+        
+        filename = "a_series_per_pod_memory_scaling_analysis.png"
+        output_path = os.path.join(self.output_dir, filename)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"        Saved: {filename}")
+
+    # =========================================================================
     # MAIN EXECUTION FUNCTION
     # =========================================================================
 
@@ -954,6 +2125,9 @@ class ASeriesVisualizer:
         
         # Generate runtime-specific charts (like compare scripts)
         self.create_runtime_specific_charts(all_runtime_data)
+        
+        # Generate comprehensive resource scaling analysis
+        self.create_comprehensive_resource_scaling_analysis(all_runtime_data)
         
         # Generate legacy A1-only charts (for backward compatibility)
         if any('a1' in runtime_data['run'].values for runtime_data in all_runtime_data.values()):

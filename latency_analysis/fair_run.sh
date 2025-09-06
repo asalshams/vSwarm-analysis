@@ -20,8 +20,23 @@ MAX_WAIT=180
 EXPECTED_PODS=""              # Required: expected pod count for validation
 SKIP_CLEANUP=0                # Skip pre-test cleanup (when handled externally)
 
+# Function to detect required constrained namespace from service name
+detect_constrained_namespace() {
+    local service_name="$1"
+    
+    # Extract configuration (a1, b2, c4, etc.) from service name
+    # Matches patterns like: fibonacci-nodejs-a1, fibonacci-python-b3, fibonacci-go-c5
+    if [[ "$service_name" =~ fibonacci-[a-z]+-([abc][1-5]) ]]; then
+        local config="${BASH_REMATCH[1]}"
+        echo "constrained-tests-${config}"
+    else
+        echo ""
+    fi
+}
+
 # Parse args (simplified for standardized testing)
 SKIP_VISUALIZATIONS=0
+ADAPTIVE_MODE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title) TITLE="$2"; shift 2;;
@@ -30,11 +45,13 @@ while [[ $# -gt 0 ]]; do
     --expected-pods) EXPECTED_PODS="$2"; shift 2;;
     --skip-cleanup) SKIP_CLEANUP=1; shift;;
     --skip-visualizations) SKIP_VISUALIZATIONS=1; shift;;
+    --adaptive) ADAPTIVE_MODE=1; shift;;
     -h|--help)
-      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--expected-pods <num>] [--skip-cleanup] [--skip-visualizations]";
+      echo "Usage: $0 --title <name> --service <svc> [--namespace default] [--expected-pods <num>] [--skip-cleanup] [--skip-visualizations] [--adaptive]";
       echo "Example: $0 --title fibonacci_go_b3 --service fibonacci-go-b3 --expected-pods 4";
       echo "  --skip-cleanup: Skip pre-test cleanup (when handled externally)";
       echo "  --skip-visualizations: Skip generating visualization charts";
+      echo "  --adaptive: Use adaptive RPS testing (stops when system reaches limits)";
       exit 0;;
     *) echo "Unknown arg: $1"; exit 1;;
   esac
@@ -45,14 +62,59 @@ if [[ -z "${TITLE:-}" || -z "${SERVICE:-}" ]]; then
   exit 1
 fi
 
+# Detect and verify constrained namespace
+CONSTRAINED_NAMESPACE=$(detect_constrained_namespace "${SERVICE}")
+
 # Prepare output dirs
 RESULTS_DIR="results_${TITLE}"
 METRICS_DIR="${RESULTS_DIR}/system_metrics"
 mkdir -p "${METRICS_DIR}"
 TS=$(date +%Y%m%d_%H%M%S)
 
-# === PRE-TEST CLEANUP (CONDITIONAL) ===
+# === PRE-TEST SETUP ===
 echo "=== Fair Test Protocol: ${TITLE} ==="
+
+# Verify constrained namespace if detected
+if [[ -n "${CONSTRAINED_NAMESPACE}" ]]; then
+    echo "0. Verifying constrained namespace: ${CONSTRAINED_NAMESPACE}"
+    
+    # Check if namespace exists
+    if ! kubectl get namespace "${CONSTRAINED_NAMESPACE}" >/dev/null 2>&1; then
+        echo "  ERROR: Constrained namespace ${CONSTRAINED_NAMESPACE} not found!" >&2
+        echo "  This service requires a constrained namespace for proper resource enforcement." >&2
+        echo "  Please deploy the namespace configuration first:" >&2
+        echo "  kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-${CONSTRAINED_NAMESPACE}.yaml" >&2
+        exit 1
+    fi
+    
+    # Verify LimitRange exists (ensures resource constraints are active)
+    if ! kubectl get limitrange -n "${CONSTRAINED_NAMESPACE}" --no-headers 2>/dev/null | grep -q .; then
+        echo "  ERROR: No LimitRange found in ${CONSTRAINED_NAMESPACE}!" >&2
+        echo "  The constrained namespace exists but lacks resource enforcement policies." >&2
+        echo "  Please redeploy the namespace configuration:" >&2
+        echo "  kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-${CONSTRAINED_NAMESPACE}.yaml" >&2
+        exit 1
+    fi
+    
+    # Verify ResourceQuota exists (ensures total resource limits are active)
+    if ! kubectl get resourcequota -n "${CONSTRAINED_NAMESPACE}" --no-headers 2>/dev/null | grep -q .; then
+        echo "  ERROR: No ResourceQuota found in ${CONSTRAINED_NAMESPACE}!" >&2
+        echo "  The constrained namespace exists but lacks resource quota policies." >&2
+        echo "  Please redeploy the namespace configuration:" >&2
+        echo "  kubectl apply -f ../benchmarks/fibonacci/yamls/knative/namespace-${CONSTRAINED_NAMESPACE}.yaml" >&2
+        exit 1
+    fi
+    
+    echo "  ✓ Constrained namespace validation passed"
+    echo "  ✓ LimitRange and ResourceQuota policies are active"
+    
+    # Update the namespace variable to use the constrained namespace
+    NAMESPACE="${CONSTRAINED_NAMESPACE}"
+    echo "  → Using constrained namespace: ${NAMESPACE}"
+else
+    echo "0. No constrained namespace detected for service: ${SERVICE}"
+    echo "  → Using default namespace: ${NAMESPACE}"
+fi
 
 if [ "$SKIP_CLEANUP" -eq 0 ]; then
     echo "1. Pre-test cleanup..."
@@ -82,7 +144,7 @@ else
 fi
 # Note: Service deployment should happen externally before calling this script
 # Wait for service to be ready
-kubectl wait --for=condition=Ready ksvc/"${SERVICE}" --timeout=120s || {
+kubectl wait --for=condition=Ready ksvc/"${SERVICE}" --namespace="${NAMESPACE}" --timeout=120s || {
     echo "Error: Service ${SERVICE} failed to become ready" >&2
     exit 1
 }
@@ -91,13 +153,13 @@ kubectl wait --for=condition=Ready ksvc/"${SERVICE}" --timeout=120s || {
 if [[ -n "${EXPECTED_PODS}" ]]; then
     echo "3. Validating pod count..."
     sleep 10  # Allow scaling to stabilize
-    ACTUAL_PODS=$(kubectl get pods -l serving.knative.dev/service="${SERVICE}" --no-headers 2>/dev/null | wc -l)
+    ACTUAL_PODS=$(kubectl get pods -l serving.knative.dev/service="${SERVICE}" --namespace="${NAMESPACE}" --no-headers 2>/dev/null | wc -l)
     echo "  Expected pods: ${EXPECTED_PODS}, Actual pods: ${ACTUAL_PODS}"
     
     if [ "$ACTUAL_PODS" -ne "${EXPECTED_PODS}" ]; then
         echo "  ERROR: Pod count mismatch!" >&2
         echo "  Current pods:" >&2
-        kubectl get pods -l serving.knative.dev/service="${SERVICE}" >&2
+        kubectl get pods -l serving.knative.dev/service="${SERVICE}" --namespace="${NAMESPACE}" >&2
         exit 1
     fi
     echo "  ✓ Pod count validation passed"
@@ -116,13 +178,13 @@ CONFIG_LOG="${METRICS_DIR}/deployment_config_${TS}.log"
     echo "Actual Pods: ${ACTUAL_PODS:-unknown}"
     echo ""
     echo "=== Knative Service Details ==="
-    kubectl get ksvc "${SERVICE}" -o yaml
+    kubectl get ksvc "${SERVICE}" --namespace="${NAMESPACE}" -o yaml
     echo ""
     echo "=== Current Pods ==="
-    kubectl get pods -l serving.knative.dev/service="${SERVICE}" -o wide
+    kubectl get pods -l serving.knative.dev/service="${SERVICE}" --namespace="${NAMESPACE}" -o wide
     echo ""
     echo "=== Resource Limits/Requests ==="
-    kubectl get pods -l serving.knative.dev/service="${SERVICE}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .spec.containers[*]}  Container: {.name}{"\n"}  CPU Request: {.resources.requests.cpu}{"\n"}  CPU Limit: {.resources.limits.cpu}{"\n"}  Memory Request: {.resources.requests.memory}{"\n"}  Memory Limit: {.resources.limits.memory}{"\n"}{end}{"\n"}{end}'
+    kubectl get pods -l serving.knative.dev/service="${SERVICE}" --namespace="${NAMESPACE}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .spec.containers[*]}  Container: {.name}{"\n"}  CPU Request: {.resources.requests.cpu}{"\n"}  CPU Limit: {.resources.limits.cpu}{"\n"}  Memory Request: {.resources.requests.memory}{"\n"}  Memory Limit: {.resources.limits.memory}{"\n"}{end}{"\n"}{end}'
 } > "${CONFIG_LOG}"
 
 echo "5. Starting controlled test environment..."
@@ -130,7 +192,7 @@ echo "5. Starting controlled test environment..."
 
 # Update endpoints.json with current service URL
 echo "  Updating endpoints.json for current service..."
-SERVICE_URL=$(kubectl get ksvc "${SERVICE}" -o jsonpath='{.status.url}' 2>/dev/null)
+SERVICE_URL=$(kubectl get ksvc "${SERVICE}" --namespace="${NAMESPACE}" -o jsonpath='{.status.url}' 2>/dev/null)
 if [[ -n "${SERVICE_URL}" ]]; then
     # Extract hostname from URL (remove http:// prefix)
     HOSTNAME=$(echo "${SERVICE_URL}" | sed 's|http://||')
@@ -239,7 +301,12 @@ CMD=(python3 run_test.py --title "${TITLE}" --service "${SERVICE}" --namespace "
 if [ "$SKIP_VISUALIZATIONS" -eq 1 ]; then
     CMD+=(--skip-visualizations)
 fi
-echo "Running with native OS scheduling: ${CMD[*]}"
+if [ "$ADAPTIVE_MODE" -eq 1 ]; then
+    CMD+=(--adaptive)
+    echo "Running with ADAPTIVE RPS testing (stops at system limits): ${CMD[*]}"
+else
+    echo "Running with FIXED RPS testing: ${CMD[*]}"
+fi
 "${CMD[@]}"
 TEST_RC=$?
 

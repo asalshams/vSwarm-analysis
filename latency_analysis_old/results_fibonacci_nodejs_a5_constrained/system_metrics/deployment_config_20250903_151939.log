@@ -1,0 +1,122 @@
+=== Deployment Configuration ===
+Timestamp: 2025-09-03T15:19:49+01:00
+Title: fibonacci_nodejs_a5_constrained
+Service: fibonacci-nodejs-a5-constrained
+Namespace: constrained-tests
+Expected Pods: 1
+Actual Pods: 1
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-nodejs-a5-constrained","namespace":"constrained-tests"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"1","autoscaling.knative.dev/minScale":"1","autoscaling.knative.dev/target":"1","serving.knative.dev/containerConcurrency":"1"}},"spec":{"containerConcurrency":1,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-nodejs","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"50m","memory":"100Mi"},"requests":{"cpu":"50m","memory":"100Mi"}}},{"args":["--addr=0.0.0.0","--port=50051"],"image":"docker.io/vhiveease/fibonacci-nodejs:latest","name":"fibonacci-nodejs","resources":{"limits":{"cpu":"50m","memory":"64Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-09-03T14:13:01Z"
+  generation: 1
+  name: fibonacci-nodejs-a5-constrained
+  namespace: constrained-tests
+  resourceVersion: "28545765"
+  uid: 81165a81-438a-4a95-845e-39f123a79243
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "1"
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/target: "1"
+        serving.knative.dev/containerConcurrency: "1"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 1
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-nodejs
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+      - args:
+        - --addr=0.0.0.0
+        - --port=50051
+        image: docker.io/vhiveease/fibonacci-nodejs:latest
+        name: fibonacci-nodejs
+        resources:
+          limits:
+            cpu: 50m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-nodejs-a5-constrained.constrained-tests.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-09-03T14:13:04Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-09-03T14:13:05Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-09-03T14:13:05Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-nodejs-a5-constrained-00001
+  latestReadyRevisionName: fibonacci-nodejs-a5-constrained-00001
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-nodejs-a5-constrained-00001
+  url: http://fibonacci-nodejs-a5-constrained.constrained-tests.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                              READY   STATUS    RESTARTS   AGE     IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-nodejs-a5-constrained-00001-deployment-64bcb5f79krxhq   3/3     Running   0          6m47s   192.168.64.206   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-nodejs-a5-constrained-00001-deployment-64bcb5f79krxhq
+  Container: relay
+  CPU Request: 50m
+  CPU Limit: 50m
+  Memory Request: 100Mi
+  Memory Limit: 100Mi
+  Container: fibonacci-nodejs
+  CPU Request: 50m
+  CPU Limit: 50m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: queue-proxy
+  CPU Request: 25m
+  CPU Limit: 100m
+  Memory Request: 100Mi
+  Memory Limit: 100Mi
+

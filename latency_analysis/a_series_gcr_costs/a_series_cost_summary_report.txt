@@ -1,0 +1,209 @@
+A-SERIES COST ANALYSIS SUMMARY REPORT
+==================================================
+
+Analysis Date: 2025-09-06 12:24:22
+Total Configurations Analyzed: 15
+
+COST EFFICIENCY RANKINGS:
+------------------------------
+Most Cost-Effective: Go A2 (1 pod) ($0.004406)
+Best Cost per Pod: Go A2 (1 pod) ($0.004406)
+Highest Throughput: Go A3 (1 pod) (9,635 requests)
+
+DETAILED RESULTS:
+--------------------
+
+Python A1 (1 pod):
+  Pods: 1
+  Duration: 445.1 seconds
+  Avg CPU: 73.7 millicores
+  Avg Memory: 50.3 MiB
+  Total Requests: 9,233
+  CPU Cost: $0.000788
+  Memory Cost: $0.000055
+  Request Cost: $0.003693
+  Total Cost: $0.004535
+  Cost per Pod: $0.004535
+  Cost per Million Requests: $0.49
+
+Python A2 (1 pod):
+  Pods: 1
+  Duration: 446.5 seconds
+  Avg CPU: 72.8 millicores
+  Avg Memory: 50.5 MiB
+  Total Requests: 9,355
+  CPU Cost: $0.000780
+  Memory Cost: $0.000055
+  Request Cost: $0.003742
+  Total Cost: $0.004577
+  Cost per Pod: $0.004577
+  Cost per Million Requests: $0.49
+
+Python A3 (1 pod):
+  Pods: 1
+  Duration: 447.2 seconds
+  Avg CPU: 73.6 millicores
+  Avg Memory: 51.0 MiB
+  Total Requests: 9,416
+  CPU Cost: $0.000791
+  Memory Cost: $0.000056
+  Request Cost: $0.003766
+  Total Cost: $0.004613
+  Cost per Pod: $0.004613
+  Cost per Million Requests: $0.49
+
+Python A4 (1 pod):
+  Pods: 1
+  Duration: 447.1 seconds
+  Avg CPU: 73.3 millicores
+  Avg Memory: 50.1 MiB
+  Total Requests: 9,504
+  CPU Cost: $0.000787
+  Memory Cost: $0.000055
+  Request Cost: $0.003802
+  Total Cost: $0.004644
+  Cost per Pod: $0.004644
+  Cost per Million Requests: $0.49
+
+Python A5 (1 pod):
+  Pods: 1
+  Duration: 446.9 seconds
+  Avg CPU: 73.5 millicores
+  Avg Memory: 50.1 MiB
+  Total Requests: 9,560
+  CPU Cost: $0.000789
+  Memory Cost: $0.000055
+  Request Cost: $0.003824
+  Total Cost: $0.004668
+  Cost per Pod: $0.004668
+  Cost per Million Requests: $0.49
+
+NodeJS A1 (1 pod):
+  Pods: 1
+  Duration: 445.8 seconds
+  Avg CPU: 72.6 millicores
+  Avg Memory: 52.9 MiB
+  Total Requests: 9,497
+  CPU Cost: $0.000777
+  Memory Cost: $0.000058
+  Request Cost: $0.003799
+  Total Cost: $0.004634
+  Cost per Pod: $0.004634
+  Cost per Million Requests: $0.49
+
+NodeJS A2 (1 pod):
+  Pods: 1
+  Duration: 446.9 seconds
+  Avg CPU: 73.9 millicores
+  Avg Memory: 51.4 MiB
+  Total Requests: 9,311
+  CPU Cost: $0.000793
+  Memory Cost: $0.000056
+  Request Cost: $0.003724
+  Total Cost: $0.004574
+  Cost per Pod: $0.004574
+  Cost per Million Requests: $0.49
+
+NodeJS A3 (1 pod):
+  Pods: 1
+  Duration: 445.7 seconds
+  Avg CPU: 72.8 millicores
+  Avg Memory: 50.6 MiB
+  Total Requests: 9,326
+  CPU Cost: $0.000779
+  Memory Cost: $0.000055
+  Request Cost: $0.003730
+  Total Cost: $0.004565
+  Cost per Pod: $0.004565
+  Cost per Million Requests: $0.49
+
+NodeJS A4 (1 pod):
+  Pods: 1
+  Duration: 445.9 seconds
+  Avg CPU: 74.5 millicores
+  Avg Memory: 53.4 MiB
+  Total Requests: 9,395
+  CPU Cost: $0.000798
+  Memory Cost: $0.000058
+  Request Cost: $0.003758
+  Total Cost: $0.004614
+  Cost per Pod: $0.004614
+  Cost per Million Requests: $0.49
+
+NodeJS A5 (1 pod):
+  Pods: 1
+  Duration: 446.4 seconds
+  Avg CPU: 71.8 millicores
+  Avg Memory: 51.9 MiB
+  Total Requests: 9,568
+  CPU Cost: $0.000771
+  Memory Cost: $0.000057
+  Request Cost: $0.003827
+  Total Cost: $0.004654
+  Cost per Pod: $0.004654
+  Cost per Million Requests: $0.49
+
+Go A1 (1 pod):
+  Pods: 1
+  Duration: 446.5 seconds
+  Avg CPU: 63.3 millicores
+  Avg Memory: 24.4 MiB
+  Total Requests: 9,418
+  CPU Cost: $0.000679
+  Memory Cost: $0.000027
+  Request Cost: $0.003767
+  Total Cost: $0.004473
+  Cost per Pod: $0.004473
+  Cost per Million Requests: $0.47
+
+Go A2 (1 pod):
+  Pods: 1
+  Duration: 446.9 seconds
+  Avg CPU: 62.6 millicores
+  Avg Memory: 24.9 MiB
+  Total Requests: 9,268
+  CPU Cost: $0.000671
+  Memory Cost: $0.000027
+  Request Cost: $0.003707
+  Total Cost: $0.004406
+  Cost per Pod: $0.004406
+  Cost per Million Requests: $0.48
+
+Go A3 (1 pod):
+  Pods: 1
+  Duration: 446.4 seconds
+  Avg CPU: 61.9 millicores
+  Avg Memory: 24.4 MiB
+  Total Requests: 9,635
+  CPU Cost: $0.000664
+  Memory Cost: $0.000027
+  Request Cost: $0.003854
+  Total Cost: $0.004544
+  Cost per Pod: $0.004544
+  Cost per Million Requests: $0.47
+
+Go A4 (1 pod):
+  Pods: 1
+  Duration: 446.1 seconds
+  Avg CPU: 61.5 millicores
+  Avg Memory: 24.1 MiB
+  Total Requests: 9,621
+  CPU Cost: $0.000659
+  Memory Cost: $0.000026
+  Request Cost: $0.003848
+  Total Cost: $0.004533
+  Cost per Pod: $0.004533
+  Cost per Million Requests: $0.47
+
+Go A5 (1 pod):
+  Pods: 1
+  Duration: 446.8 seconds
+  Avg CPU: 61.1 millicores
+  Avg Memory: 24.4 MiB
+  Total Requests: 9,605
+  CPU Cost: $0.000656
+  Memory Cost: $0.000027
+  Request Cost: $0.003842
+  Total Cost: $0.004525
+  Cost per Pod: $0.004525
+  Cost per Million Requests: $0.47
