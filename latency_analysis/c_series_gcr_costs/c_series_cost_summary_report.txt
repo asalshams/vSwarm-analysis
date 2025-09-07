@@ -1,0 +1,209 @@
+C-SERIES COST ANALYSIS SUMMARY REPORT
+==================================================
+
+Analysis Date: 2025-09-07 19:16:28
+Total Configurations Analyzed: 15
+
+COST EFFICIENCY RANKINGS:
+------------------------------
+Most Cost-Effective: Go C1 (1 pod) ($0.040253)
+Best Cost per Pod: Go C1 (1 pod) ($0.040253)
+Highest Throughput: Go C5 (8 pods) (3,457,711 requests)
+
+DETAILED RESULTS:
+--------------------
+
+Python C1 (1 pod):
+  Pods: 1
+  Duration: 1405.1 seconds
+  Avg CPU: 121.5 millicores
+  Avg Memory: 64.1 MiB
+  Total Requests: 93,075
+  CPU Cost: $0.004101
+  Memory Cost: $0.000220
+  Request Cost: $0.037230
+  Total Cost: $0.041551
+  Cost per Pod: $0.041551
+  Cost per Million Requests: $0.45
+
+Python C2 (2 pods):
+  Pods: 2
+  Duration: 2997.9 seconds
+  Avg CPU: 199.8 millicores
+  Avg Memory: 121.2 MiB
+  Total Requests: 313,375
+  CPU Cost: $0.014463
+  Memory Cost: $0.000888
+  Request Cost: $0.125350
+  Total Cost: $0.140702
+  Cost per Pod: $0.070351
+  Cost per Million Requests: $0.45
+
+Python C3 (4 pods):
+  Pods: 4
+  Duration: 4286.5 seconds
+  Avg CPU: 428.3 millicores
+  Avg Memory: 235.3 MiB
+  Total Requests: 918,112
+  CPU Cost: $0.044554
+  Memory Cost: $0.002470
+  Request Cost: $0.367245
+  Total Cost: $0.414269
+  Cost per Pod: $0.103567
+  Cost per Million Requests: $0.45
+
+Python C4 (7 pods):
+  Pods: 7
+  Duration: 4662.0 seconds
+  Avg CPU: 618.7 millicores
+  Avg Memory: 377.7 MiB
+  Total Requests: 1,118,303
+  CPU Cost: $0.070204
+  Memory Cost: $0.004303
+  Request Cost: $0.447321
+  Total Cost: $0.521828
+  Cost per Pod: $0.074547
+  Cost per Million Requests: $0.47
+
+Python C5 (8 pods):
+  Pods: 8
+  Duration: 4663.3 seconds
+  Avg CPU: 664.2 millicores
+  Avg Memory: 417.5 MiB
+  Total Requests: 1,112,558
+  CPU Cost: $0.075554
+  Memory Cost: $0.004756
+  Request Cost: $0.445023
+  Total Cost: $0.525333
+  Cost per Pod: $0.065667
+  Cost per Million Requests: $0.47
+
+NodeJS C1 (1 pod):
+  Pods: 1
+  Duration: 1405.8 seconds
+  Avg CPU: 99.6 millicores
+  Avg Memory: 81.4 MiB
+  Total Requests: 92,800
+  CPU Cost: $0.003364
+  Memory Cost: $0.000280
+  Request Cost: $0.037120
+  Total Cost: $0.040764
+  Cost per Pod: $0.040764
+  Cost per Million Requests: $0.44
+
+NodeJS C2 (2 pods):
+  Pods: 2
+  Duration: 2489.5 seconds
+  Avg CPU: 190.9 millicores
+  Avg Memory: 147.0 MiB
+  Total Requests: 272,688
+  CPU Cost: $0.011451
+  Memory Cost: $0.000896
+  Request Cost: $0.109075
+  Total Cost: $0.121422
+  Cost per Pod: $0.060711
+  Cost per Million Requests: $0.45
+
+NodeJS C3 (4 pods):
+  Pods: 4
+  Duration: 4736.9 seconds
+  Avg CPU: 372.0 millicores
+  Avg Memory: 289.1 MiB
+  Total Requests: 1,095,412
+  CPU Cost: $0.042581
+  Memory Cost: $0.003358
+  Request Cost: $0.438165
+  Total Cost: $0.484104
+  Cost per Pod: $0.121026
+  Cost per Million Requests: $0.44
+
+NodeJS C4 (7 pods):
+  Pods: 7
+  Duration: 6965.8 seconds
+  Avg CPU: 628.5 millicores
+  Avg Memory: 481.7 MiB
+  Total Requests: 2,454,380
+  CPU Cost: $0.107298
+  Memory Cost: $0.008280
+  Request Cost: $0.981752
+  Total Cost: $1.097330
+  Cost per Pod: $0.156761
+  Cost per Million Requests: $0.45
+
+NodeJS C5 (8 pods):
+  Pods: 8
+  Duration: 4661.9 seconds
+  Avg CPU: 606.9 millicores
+  Avg Memory: 505.9 MiB
+  Total Requests: 1,117,283
+  CPU Cost: $0.068974
+  Memory Cost: $0.005789
+  Request Cost: $0.446913
+  Total Cost: $0.521677
+  Cost per Pod: $0.065210
+  Cost per Million Requests: $0.47
+
+Go C1 (1 pod):
+  Pods: 1
+  Duration: 1404.7 seconds
+  Avg CPU: 79.6 millicores
+  Avg Memory: 36.0 MiB
+  Total Requests: 93,612
+  CPU Cost: $0.002685
+  Memory Cost: $0.000124
+  Request Cost: $0.037445
+  Total Cost: $0.040253
+  Cost per Pod: $0.040253
+  Cost per Million Requests: $0.43
+
+Go C2 (2 pods):
+  Pods: 2
+  Duration: 2492.3 seconds
+  Avg CPU: 154.2 millicores
+  Avg Memory: 64.9 MiB
+  Total Requests: 269,456
+  CPU Cost: $0.009236
+  Memory Cost: $0.000398
+  Request Cost: $0.107782
+  Total Cost: $0.117416
+  Cost per Pod: $0.058708
+  Cost per Million Requests: $0.44
+
+Go C3 (4 pods):
+  Pods: 4
+  Duration: 4862.0 seconds
+  Avg CPU: 306.4 millicores
+  Avg Memory: 120.0 MiB
+  Total Requests: 1,166,902
+  CPU Cost: $0.035960
+  Memory Cost: $0.001430
+  Request Cost: $0.466761
+  Total Cost: $0.504150
+  Cost per Pod: $0.126038
+  Cost per Million Requests: $0.43
+
+Go C4 (7 pods):
+  Pods: 7
+  Duration: 7222.9 seconds
+  Avg CPU: 526.9 millicores
+  Avg Memory: 196.9 MiB
+  Total Requests: 2,605,034
+  CPU Cost: $0.093173
+  Memory Cost: $0.003491
+  Request Cost: $1.042014
+  Total Cost: $1.138677
+  Cost per Pod: $0.162668
+  Cost per Million Requests: $0.44
+
+Go C5 (8 pods):
+  Pods: 8
+  Duration: 8180.5 seconds
+  Avg CPU: 611.7 millicores
+  Avg Memory: 227.2 MiB
+  Total Requests: 3,457,711
+  CPU Cost: $0.122131
+  Memory Cost: $0.004553
+  Request Cost: $1.383084
+  Total Cost: $1.509769
+  Cost per Pod: $0.188721
+  Cost per Million Requests: $0.44

@@ -880,10 +880,44 @@ class BSeriesVisualizer:
             grouped['run_order'] = grouped['run'].map({'B1': 1, 'B2': 2, 'B3': 3, 'B4': 4, 'B5': 5})
             grouped = grouped.sort_values(['run_order', 'target_rps']).drop('run_order', axis=1)
             
-            # Save aggregated CSV
+            # Save aggregated CSV with descriptive comments
             filename = f"fibonacci_{runtime}_b_aggregated.csv"
             output_path = os.path.join(runtime_dir, filename)
-            grouped.to_csv(output_path, index=False)
+            
+            with open(output_path, 'w') as f:
+                # Write descriptive comments
+                f.write(f"# {runtime.title()}-Series Aggregated Performance Data\n")
+                f.write("# ===============================================\n")
+                f.write("# \n")
+                f.write("# This file contains aggregated performance metrics averaged across iterations\n")
+                f.write("# for each configuration (B1-B5) and target RPS level.\n")
+                f.write("# \n")
+                f.write("# Columns Description:\n")
+                f.write("# - run: Configuration (B1, B2, B3, B4, B5)\n")
+                f.write("# - pods: Number of pods (1 to 10)\n")
+                f.write("# - container_cpu: CPU allocation per pod\n")
+                f.write("# - container_mem: Memory allocation per pod\n")
+                f.write("# - target_conc: Container concurrency per pod\n")
+                f.write("# - target_rps: Requested RPS for the test\n")
+                f.write("# - throughput_rps: Actual throughput achieved (average across iterations)\n")
+                f.write("# - actual_rps: Same as throughput_rps (for compatibility)\n")
+                f.write("# - total_requests: Total requests processed (average across iterations)\n")
+                f.write("# - average/median/p95/p99: Latency percentiles in microseconds\n")
+                f.write("# - *_ms: Same latency metrics converted to milliseconds\n")
+                f.write("# \n")
+                f.write("# B-Series Configuration (Constant Total Resources):\n")
+                f.write("# - B1: 1 pod, 1000m CPU, 1Gi memory, concurrency=1000\n")
+                f.write("# - B2: 2 pods, 500m CPU each, 500Mi memory each, concurrency=500\n")
+                f.write("# - B3: 4 pods, 250m CPU each, 250Mi memory each, concurrency=250\n")
+                f.write("# - B4: 8 pods, 125m CPU each, 125Mi memory each, concurrency=125\n")
+                f.write("# - B5: 10 pods, 100m CPU each, 100Mi memory each, concurrency=100\n")
+                f.write("# \n")
+                f.write("# Total resources remain constant: 1000m CPU, 1Gi memory\n")
+                f.write("# Tests horizontal scaling efficiency with varying pod counts.\n")
+                f.write("# \n")
+                
+                # Write the actual data
+                grouped.to_csv(f, index=False)
             
             print(f"      Saved: {filename}")
             
@@ -905,27 +939,22 @@ class BSeriesVisualizer:
                             with open(summary_file, 'r') as f:
                                 lines = f.readlines()
                             
-                            # Extract the "Overall Max" value from the summary section
-                            overall_max = None
-                            target_at_max = None
+                            # Extract the "Avg of Max" value from the summary section
+                            avg_of_max = None
                             
                             for line in lines:
-                                if line.startswith('Overall Max'):
+                                if line.startswith('Avg of Max'):
                                     parts = line.strip().split(',')
                                     if len(parts) >= 2:
-                                        overall_max = float(parts[1])
-                                        target_at_max = float(parts[2]) if len(parts) > 2 else None
+                                        avg_of_max = float(parts[1])
                                         break
                             
-                            if overall_max is not None:
+                            if avg_of_max is not None:
                                 # Get the corresponding row from grouped data for latency metrics
                                 run_data = grouped[grouped['run'] == run]
                                 if not run_data.empty:
-                                    # Find the row closest to the target RPS at max
-                                    if target_at_max is not None:
-                                        closest_idx = (run_data['target_rps'] - target_at_max).abs().idxmin()
-                                    else:
-                                        closest_idx = run_data['actual_rps'].idxmax()
+                                    # Find the row with the highest actual RPS for latency metrics
+                                    closest_idx = run_data['actual_rps'].idxmax()
                                     
                                     max_throughput_row = run_data.loc[closest_idx]
                                     
@@ -934,8 +963,7 @@ class BSeriesVisualizer:
                                         'Pods': max_throughput_row['pods'],
                                         'CPU_per_Pod': max_throughput_row['container_cpu'],
                                         'Memory_per_Pod': max_throughput_row['container_mem'],
-                                        'Max_Throughput_RPS': f"{overall_max:.1f}",
-                                        'Target_RPS_at_Max': f"{target_at_max:.0f}" if target_at_max else "N/A",
+                                        'Max_Throughput_RPS': f"{avg_of_max:.1f}",
                                         'Avg_Latency_ms': f"{max_throughput_row.get('average_ms', max_throughput_row['average']/1000):.2f}",
                                         'P95_Latency_ms': f"{max_throughput_row.get('p95_ms', max_throughput_row['p95']/1000):.2f}",
                                         'P99_Latency_ms': f"{max_throughput_row.get('p99_ms', max_throughput_row['p99']/1000):.2f}"
@@ -943,7 +971,7 @@ class BSeriesVisualizer:
                                 else:
                                     print(f"      Warning: No grouped data found for {run}")
                             else:
-                                print(f"      Warning: Could not extract Overall Max from {summary_file}")
+                                print(f"      Warning: Could not extract Avg of Max from {summary_file}")
                                 
                         except Exception as e:
                             print(f"      Error reading {summary_file}: {e}")
@@ -956,7 +984,27 @@ class BSeriesVisualizer:
                 summary_df = pd.DataFrame(summary_data)
                 summary_filename = f"fibonacci_{runtime}_b_summary.csv"
                 summary_path = os.path.join(runtime_dir, summary_filename)
-                summary_df.to_csv(summary_path, index=False)
+                
+                with open(summary_path, 'w') as f:
+                    # Write descriptive comments
+                    f.write(f"# {runtime.title()}-Series Performance Summary Table\n")
+                    f.write("# ===============================================\n")
+                    f.write("# \n")
+                    f.write("# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations\n")
+                    f.write("#                   (more conservative metric than single peak performance)\n")
+                    f.write("# \n")
+                    f.write("# Latency metrics: Average latency across iterations at the RPS level where\n")
+                    f.write("#                 the highest actual RPS was achieved (represents realistic\n")
+                    f.write("#                 performance under peak load conditions)\n")
+                    f.write("# \n")
+                    f.write("# Configuration: B1 (1 pod, 1000m CPU) to B5 (10 pods, 100m CPU each)\n")
+                    f.write("# All configurations maintain constant total resources (1000m CPU, 1Gi memory)\n")
+                    f.write("# but vary pod count and containerConcurrency for scaling analysis\n")
+                    f.write("# \n")
+                    
+                    # Write the actual data
+                    summary_df.to_csv(f, index=False)
+                
                 print(f"      Saved: {summary_filename}")
             else:
                 print(f"      Warning: No summary data generated for {runtime}")

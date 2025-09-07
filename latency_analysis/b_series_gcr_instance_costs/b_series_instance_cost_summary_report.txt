@@ -1,0 +1,14 @@
+B-SERIES INSTANCE-BASED COST ANALYSIS SUMMARY REPORT
+============================================================
+
+Analysis Date: 2025-09-07 10:27:44
+Billing Model: Instance-Based
+CPU Rate: $0.000018 per vCPU-second
+Memory Rate: $0.000002 per GiB-second
+Request Charges: None (instance-based billing)
+Total Configurations Analyzed: 15
+
+COST EFFICIENCY RANKINGS:
+------------------------------
+Most Cost-Effective: Go B1 (1 pod) ($0.002121)
+Best Cost per Pod: Go B1 (1 pod) ($0.002121)

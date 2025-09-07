@@ -1,6 +1,20 @@
-Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Target_RPS_at_Max,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
-B1,1,1000m,1Gi,104.0,120,5422.78,10989.56,11705.64
-B2,2,500m,500Mi,198.0,240,5438.43,10819.31,11461.46
-B3,4,250m,250Mi,372.1,340,4612.93,8864.66,9200.13
-B4,8,125m,125Mi,423.4,340,106.26,265.66,452.38
-B5,10,100m,100Mi,419.0,440,82.47,216.67,390.14
+# Python-Series Performance Summary Table
+# ===============================================
+# 
+# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations
+#                   (more conservative metric than single peak performance)
+# 
+# Latency metrics: Average latency across iterations at the RPS level where
+#                 the highest actual RPS was achieved (represents realistic
+#                 performance under peak load conditions)
+# 
+# Configuration: B1 (1 pod, 1000m CPU) to B5 (10 pods, 100m CPU each)
+# All configurations maintain constant total resources (1000m CPU, 1Gi memory)
+# but vary pod count and containerConcurrency for scaling analysis
+# 
+Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
+B1,1,1000m,1Gi,100.4,5422.78,10989.56,11705.64
+B2,2,500m,500Mi,192.6,5438.43,10819.31,11461.46
+B3,4,250m,250Mi,368.8,4612.93,8864.66,9200.13
+B4,8,125m,125Mi,422.5,104.97,261.54,437.67
+B5,10,100m,100Mi,418.7,83.83,215.86,386.28

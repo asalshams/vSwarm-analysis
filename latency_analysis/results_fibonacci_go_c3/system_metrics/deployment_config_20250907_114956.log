@@ -1,0 +1,175 @@
+=== Deployment Configuration ===
+Timestamp: 2025-09-07T11:50:06+01:00
+Title: fibonacci_go_c3
+Service: fibonacci-go-c3
+Namespace: constrained-tests-c3
+Expected Pods: 4
+Actual Pods: 4
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-go-c3","namespace":"constrained-tests-c3"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"4","autoscaling.knative.dev/minScale":"4","autoscaling.knative.dev/target":"50","serving.knative.dev/containerConcurrency":"50"}},"spec":{"containerConcurrency":50,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-go","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"30m","memory":"64Mi"},"requests":{"cpu":"30m","memory":"64Mi"}}},{"args":["-addr=0.0.0.0:50051"],"image":"docker.io/vhiveease/fibonacci-go:latest","name":"fibonacci-go","resources":{"limits":{"cpu":"500m","memory":"500Mi"},"requests":{"cpu":"500m","memory":"500Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-09-07T10:45:13Z"
+  generation: 1
+  name: fibonacci-go-c3
+  namespace: constrained-tests-c3
+  resourceVersion: "30779984"
+  uid: 877162f8-a077-449d-890c-50b0f5c50d7e
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "4"
+        autoscaling.knative.dev/minScale: "4"
+        autoscaling.knative.dev/target: "50"
+        serving.knative.dev/containerConcurrency: "50"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 50
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-go
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 30m
+            memory: 64Mi
+          requests:
+            cpu: 30m
+            memory: 64Mi
+      - args:
+        - -addr=0.0.0.0:50051
+        image: docker.io/vhiveease/fibonacci-go:latest
+        name: fibonacci-go
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 500m
+            memory: 500Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-go-c3.constrained-tests-c3.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-09-07T10:49:25Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-09-07T10:49:25Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-09-07T10:49:25Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-go-c3-00001
+  latestReadyRevisionName: fibonacci-go-c3-00001
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-go-c3-00001
+  url: http://fibonacci-go-c3.constrained-tests-c3.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                READY   STATUS    RESTARTS   AGE     IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-go-c3-00001-deployment-774b87c4c8-8m64m   3/3     Running   0          4m53s   192.168.64.229   cloud-vm-43-24   <none>           <none>
+fibonacci-go-c3-00001-deployment-774b87c4c8-cphfd   3/3     Running   0          4m53s   192.168.64.215   cloud-vm-43-24   <none>           <none>
+fibonacci-go-c3-00001-deployment-774b87c4c8-px9r4   3/3     Running   0          4m53s   192.168.64.203   cloud-vm-43-24   <none>           <none>
+fibonacci-go-c3-00001-deployment-774b87c4c8-z6tph   3/3     Running   0          4m53s   192.168.64.204   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-go-c3-00001-deployment-774b87c4c8-8m64m
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-go
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-go-c3-00001-deployment-774b87c4c8-cphfd
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-go
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-go-c3-00001-deployment-774b87c4c8-px9r4
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-go
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-go-c3-00001-deployment-774b87c4c8-z6tph
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-go
+  CPU Request: 500m
+  CPU Limit: 500m
+  Memory Request: 500Mi
+  Memory Limit: 500Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+

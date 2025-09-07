@@ -1,3 +1,32 @@
+# Go-Series Aggregated Performance Data
+# ===============================================
+# 
+# This file contains aggregated performance metrics averaged across iterations
+# for each configuration (B1-B5) and target RPS level.
+# 
+# Columns Description:
+# - run: Configuration (B1, B2, B3, B4, B5)
+# - pods: Number of pods (1 to 10)
+# - container_cpu: CPU allocation per pod
+# - container_mem: Memory allocation per pod
+# - target_conc: Container concurrency per pod
+# - target_rps: Requested RPS for the test
+# - throughput_rps: Actual throughput achieved (average across iterations)
+# - actual_rps: Same as throughput_rps (for compatibility)
+# - total_requests: Total requests processed (average across iterations)
+# - average/median/p95/p99: Latency percentiles in microseconds
+# - *_ms: Same latency metrics converted to milliseconds
+# 
+# B-Series Configuration (Constant Total Resources):
+# - B1: 1 pod, 1000m CPU, 1Gi memory, concurrency=1000
+# - B2: 2 pods, 500m CPU each, 500Mi memory each, concurrency=500
+# - B3: 4 pods, 250m CPU each, 250Mi memory each, concurrency=250
+# - B4: 8 pods, 125m CPU each, 125Mi memory each, concurrency=125
+# - B5: 10 pods, 100m CPU each, 100Mi memory each, concurrency=100
+# 
+# Total resources remain constant: 1000m CPU, 1Gi memory
+# Tests horizontal scaling efficiency with varying pod counts.
+# 
 run,pods,container_cpu,container_mem,target_conc,target_rps,throughput_rps,actual_rps,total_requests,average,average_ms,median,median_ms,p95,p95_ms,p99,p99_ms
 B1,1,1000m,1Gi,100,20.0,20.0,20.0,1200.0,13052.294722222223,13.052294722222223,6424.5,6.4245,31704.51666666642,31.704516666666418,185582.70666666664,185.58270666666664
 B1,1,1000m,1Gi,100,40.0,39.96,39.96,2397.6666666666665,86338.2669084573,86.3382669084573,48755.333333333336,48.75533333333333,300138.56666666665,300.13856666666663,648816.383333335,648.816383333335

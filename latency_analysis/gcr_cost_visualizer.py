@@ -82,6 +82,46 @@ class GCRCostVisualizer:
         
         plt.show()
         
+    def plot_simple_cost_comparison(self, results_df, series_type="B", save_path=None):
+        """Create simplified cost comparison charts (Total Cost + Cost Breakdown only)"""
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        fig.suptitle(f'Google Cloud Run {series_type.upper()}-Series Simple Cost Analysis', fontsize=16, fontweight='bold')
+        
+        # 1. Total Cost by Configuration
+        ax1.bar(results_df['config'], results_df['total_cost'], 
+                color=self.colors[:len(results_df)], alpha=0.8)
+        ax1.set_title('Total Cost by Configuration')
+        ax1.set_ylabel('Cost (USD)')
+        ax1.tick_params(axis='x', rotation=45)
+        
+        # Add value labels on bars
+        for i, v in enumerate(results_df['total_cost']):
+            ax1.text(i, v + max(results_df['total_cost']) * 0.01, f'${v:.6f}', 
+                    ha='center', va='bottom', fontweight='bold')
+        
+        # 2. Cost Breakdown (Compute vs Requests)
+        width = 0.35
+        x = np.arange(len(results_df))
+        
+        ax2.bar(x, results_df['compute_cost'], width, label='Compute Cost', 
+                color='lightblue', alpha=0.8)
+        ax2.bar(x, results_df['request_cost'], width, bottom=results_df['compute_cost'],
+                label='Request Cost', color='lightcoral', alpha=0.8)
+        
+        ax2.set_title('Cost Breakdown: Compute vs Requests')
+        ax2.set_ylabel('Cost (USD)')
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(results_df['config'], rotation=45)
+        ax2.legend()
+        
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Simple cost comparison chart saved to {save_path}")
+        
+        plt.show()
+        
     def plot_resource_timeline(self, calculator, telemetry_files, config_names, save_path=None):
         """Plot resource usage over time for all configurations"""
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
@@ -181,11 +221,12 @@ class GCRCostVisualizer:
             'Avg CPU (m)': results_df['avg_cpu'].round(1),
             'Avg Memory (MiB)': results_df['avg_memory'].round(1),
             'Total Requests': results_df['total_requests'].astype(int),
+            'Max Achieved RPS': results_df['max_achieved_rps'].round(1) if 'max_achieved_rps' in results_df.columns else 'N/A',
             'Compute Cost': results_df['compute_cost'].apply(lambda x: f"${x:.6f}"),
             'Request Cost': results_df['request_cost'].apply(lambda x: f"${x:.6f}"),
             'Total Cost': results_df['total_cost'].apply(lambda x: f"${x:.6f}"),
-            'Cost/Pod': (results_df['total_cost'] / results_df['pods']).apply(lambda x: f"${x:.6f}"),
-            'Cost/Million Req': (results_df['total_cost'] / results_df['total_requests'] * 1000000).apply(lambda x: f"${x:.2f}")
+            'Cost/Million Req': (results_df['total_cost'] / results_df['total_requests'] * 1000000).apply(lambda x: f"${x:.2f}"),
+            'Cost/Achieved RPS': results_df['cost_per_rps'].apply(lambda x: f"${x:.6f}" if pd.notna(x) else 'N/A')
         }
         
         summary_df = pd.DataFrame(summary_data)
@@ -295,6 +336,41 @@ class GCRCostVisualizer:
         print(f"All visualizations saved to {output_directory}/")
         
         return results_df
+        
+    def generate_simple_cost_comparison(self, calculator, data_directory, series_type="B", output_directory=None):
+        """Generate only the simple cost comparison chart"""
+        # Set default output directory
+        if output_directory is None:
+            output_directory = f"{series_type.lower()}_series_gcr_costs"
+        
+        # Create output directory
+        os.makedirs(output_directory, exist_ok=True)
+        
+        # Process configurations for the specified series
+        results = calculator.process_series_configurations(data_directory, series_type)
+        
+        if not results:
+            print("No results to visualize")
+            return
+        
+        results_df = pd.DataFrame(results)
+        
+        print("Generating simple cost comparison...")
+        
+        # Generate simple cost comparison chart
+        self.plot_simple_cost_comparison(
+            results_df, 
+            series_type,
+            save_path=os.path.join(output_directory, "simple_cost_comparison.png")
+        )
+        
+        # Save results to CSV
+        series_prefix = f"{series_type.lower()}_series"
+        results_df.to_csv(os.path.join(output_directory, f"{series_prefix}_results.csv"), index=False)
+        
+        print(f"Simple cost comparison saved to {output_directory}/")
+        
+        return results_df
 
 # Example usage combining both scripts
 if __name__ == "__main__":
@@ -308,6 +384,8 @@ if __name__ == "__main__":
                        help='Data directory containing results_* directories. Default: current directory')
     parser.add_argument('--output-dir', '-o', default=None,
                        help='Output directory for results. Default: {series}_series_gcr_costs')
+    parser.add_argument('--simple-cost', action='store_true',
+                       help='Generate only simple cost comparison (Total Cost + Cost Breakdown)')
     
     args = parser.parse_args()
     
@@ -329,8 +407,11 @@ if __name__ == "__main__":
     print(f"Output directory: {output_dir}")
     print("-" * 60)
     
-    # Generate all visualizations
-    results_df = visualizer.generate_all_visualizations(calculator, data_directory, args.series, output_dir)
+    # Generate visualizations based on flag
+    if args.simple_cost:
+        results_df = visualizer.generate_simple_cost_comparison(calculator, data_directory, args.series, output_dir)
+    else:
+        results_df = visualizer.generate_all_visualizations(calculator, data_directory, args.series, output_dir)
     
     if results_df is not None:
         print("\nVisualization Summary:")

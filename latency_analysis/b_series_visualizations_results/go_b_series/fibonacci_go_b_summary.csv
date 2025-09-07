@@ -1,6 +1,20 @@
-Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Target_RPS_at_Max,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
-B1,1,1000m,1Gi,106.8,120,4646.64,8267.95,8817.88
-B2,2,500m,500Mi,210.0,220,4979.15,8761.82,9176.86
-B3,4,250m,250Mi,393.3,360,4191.07,7486.63,7892.58
-B4,8,125m,125Mi,430.4,440,80.84,215.69,396.41
-B5,10,100m,100Mi,433.4,380,67.89,193.99,379.90
+# Go-Series Performance Summary Table
+# ===============================================
+# 
+# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations
+#                   (more conservative metric than single peak performance)
+# 
+# Latency metrics: Average latency across iterations at the RPS level where
+#                 the highest actual RPS was achieved (represents realistic
+#                 performance under peak load conditions)
+# 
+# Configuration: B1 (1 pod, 1000m CPU) to B5 (10 pods, 100m CPU each)
+# All configurations maintain constant total resources (1000m CPU, 1Gi memory)
+# but vary pod count and containerConcurrency for scaling analysis
+# 
+Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
+B1,1,1000m,1Gi,106.0,4646.64,8267.95,8817.88
+B2,2,500m,500Mi,204.6,4979.15,8761.82,9176.86
+B3,4,250m,250Mi,388.7,3075.89,5557.55,6145.88
+B4,8,125m,125Mi,430.0,80.84,215.69,396.41
+B5,10,100m,100Mi,432.9,66.46,188.81,361.15

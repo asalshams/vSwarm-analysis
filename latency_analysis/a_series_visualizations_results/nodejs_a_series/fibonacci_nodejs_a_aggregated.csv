@@ -1,3 +1,32 @@
+# Nodejs-Series Aggregated Performance Data
+# ===============================================
+# 
+# This file contains aggregated performance metrics averaged across iterations
+# for each configuration (A1-A5) and target RPS level.
+# 
+# Columns Description:
+# - run: Configuration (A1, A2, A3, A4, A5)
+# - pods: Number of pods (always 1 for A-series)
+# - container_cpu: CPU allocation per pod
+# - container_mem: Memory allocation per pod
+# - target_conc: Container concurrency (always 1 for A-series)
+# - target_rps: Requested RPS for the test
+# - throughput_rps: Actual throughput achieved (average across iterations)
+# - actual_rps: Same as throughput_rps (for compatibility)
+# - total_requests: Total requests processed (average across iterations)
+# - average/median/p95/p99: Latency percentiles in microseconds
+# - *_ms: Same latency metrics converted to milliseconds
+# 
+# A-Series Configuration:
+# - A1: 1000m CPU, 1Gi memory (highest resources)
+# - A2: 500m CPU, 500Mi memory
+# - A3: 250m CPU, 250Mi memory
+# - A4: 125m CPU, 125Mi memory
+# - A5: 100m CPU, 100Mi memory (lowest resources)
+# 
+# All A-series tests use containerConcurrency=1 (single-threaded)
+# to analyze single-threading performance limits.
+# 
 run,pods,container_cpu,container_mem,target_conc,target_rps,throughput_rps,actual_rps,total_requests,average,average_ms,median,median_ms,p95,p95_ms,p99,p99_ms
 A1,1,1000m,1Gi,1,20.0,20.0,20.0,1200.0,14675.005555555554,14.675005555555554,7061.0,7.061,58599.49999999999,58.59949999999999,174619.38,174.61938
 A1,1,1000m,1Gi,1,40.0,32.76,32.76,1965.6666666666667,5483131.593450191,5483.131593450192,5723012.333333333,5723.012333333333,10295914.75,10295.91475,10762986.25,10762.98625

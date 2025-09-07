@@ -203,8 +203,8 @@ class IndividualTestVisualizer:
                     runtime = parts[0]
                     test_type = '_'.join(parts[1:])
                     
-                    # Filter for A-series only
-                    if runtime in RUNTIME_COLORS and test_type.startswith('a'):
+                    # Filter for C-series only
+                    if runtime in RUNTIME_COLORS and test_type.startswith('c'):
                         test_dirs.append({
                             'directory': item,
                             'runtime': runtime,

@@ -27,7 +27,7 @@ class ComprehensiveTestRunner:
     # Adaptive testing configuration
     ADAPTIVE_START_RPS = 20
     ADAPTIVE_INCREMENT = 20
-    ADAPTIVE_MAX_RPS = 1000
+    ADAPTIVE_MAX_RPS = 2000
     
     # Stopping conditions (simplified - focus on throughput)
     MIN_THROUGHPUT_RATIO = 0.85  # Stop if actual throughput < 85% of target (primary condition)

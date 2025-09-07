@@ -133,9 +133,10 @@ def process_results_directory(results_dir):
     print(f"  Created: {summary_file}")
     print(f"  Processed {len(rps_data)} target RPS levels")
 
-def find_results_directories(base_dir):
+def find_results_directories(base_dir, c_series_only=False):
     """
     Find all results directories that match the pattern 'results_fibonacci_*'
+    If c_series_only is True, only return directories containing 'c' in the name
     """
     results_dirs = []
     
@@ -151,6 +152,9 @@ def find_results_directories(base_dir):
     
     for item in os.listdir(search_dir):
         if item.startswith('results_fibonacci_'):
+            # If c_series_only is True, only include directories ending with 'c' followed by a number
+            if c_series_only and not re.search(r'c\d+$', item):
+                continue
             full_path = os.path.join(search_dir, item)
             if os.path.isdir(full_path):
                 results_dirs.append(full_path)
@@ -160,23 +164,30 @@ def find_results_directories(base_dir):
 def main():
     """
     Main function to process all results directories
+    Usage: python3 extract_achieved_rps.py [base_dir] [--c-series-only]
     """
-    # Get the current working directory or use provided argument
-    if len(sys.argv) > 1:
-        base_dir = sys.argv[1]
-    else:
-        base_dir = os.getcwd()
+    # Parse command line arguments
+    c_series_only = False
+    base_dir = os.getcwd()
     
-    print(f"Scanning for results directories in: {base_dir}")
+    for arg in sys.argv[1:]:
+        if arg == '--c-series-only':
+            c_series_only = True
+        elif not arg.startswith('--'):
+            base_dir = arg
+    
+    series_type = "C series" if c_series_only else "all"
+    print(f"Scanning for {series_type} results directories in: {base_dir}")
     
     # Find all results directories
-    results_dirs = find_results_directories(base_dir)
+    results_dirs = find_results_directories(base_dir, c_series_only)
     
     if not results_dirs:
-        print("No results directories found matching pattern 'results_fibonacci_*'")
+        pattern = "results_fibonacci_*c*" if c_series_only else "results_fibonacci_*"
+        print(f"No results directories found matching pattern '{pattern}'")
         return
     
-    print(f"Found {len(results_dirs)} results directories:")
+    print(f"Found {len(results_dirs)} {series_type} results directories:")
     for dir_path in results_dirs:
         print(f"  {os.path.basename(dir_path)}")
     
@@ -191,7 +202,7 @@ def main():
         print()
     
     print("="*60)
-    print("Summary extraction completed!")
+    print(f"{series_type.title()} summary extraction completed!")
     print(f"Check each results directory for 'achieved_rps_summary.csv' files")
 
 if __name__ == "__main__":

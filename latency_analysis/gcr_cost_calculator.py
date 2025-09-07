@@ -93,6 +93,21 @@ class GCRCostCalculator:
         except Exception as e:
             print(f"Error parsing performance file {filepath}: {e}")
             return 0
+
+    def parse_performance_file_extended(self, filepath):
+        """Parse performance results to get request counts AND RPS data"""
+        try:
+            df = pd.read_csv(filepath)
+            total_requests = df['total_requests'].sum()
+            
+            # Add RPS calculation - using throughput_rps (achieved RPS) from performance files
+            max_achieved_rps = df['throughput_rps'].max() if 'throughput_rps' in df.columns else None
+            avg_achieved_rps = df['throughput_rps'].mean() if 'throughput_rps' in df.columns else None
+            
+            return int(total_requests), max_achieved_rps, avg_achieved_rps
+        except Exception as e:
+            print(f"Error parsing performance file {filepath}: {e}")
+            return 0, None, None
     
     def calculate_request_costs(self, total_requests):
         """Calculate request-based costs"""
@@ -112,7 +127,7 @@ class GCRCostCalculator:
         cpu_cost, memory_cost, total_compute_cost, stats = self.calculate_telemetry_costs(df)
         
         # Parse request data
-        total_requests = self.parse_performance_file(performance_file)
+        total_requests, max_achieved_rps, avg_achieved_rps = self.parse_performance_file_extended(performance_file)
         request_cost = self.calculate_request_costs(total_requests)
         
         # Calculate total cost
@@ -160,6 +175,9 @@ class GCRCostCalculator:
             'memory_cost': memory_cost,
             'compute_cost': total_compute_cost,
             'total_requests': total_requests,
+            'max_achieved_rps': max_achieved_rps,
+            'avg_achieved_rps': avg_achieved_rps,
+            'cost_per_rps': total_cost / max_achieved_rps if max_achieved_rps and max_achieved_rps > 0 else None,
             'request_cost': request_cost,
             'total_cost': total_cost,
             'compute_percentage': (total_compute_cost/total_cost*100),
@@ -209,18 +227,18 @@ class GCRCostCalculator:
                 {'name': 'Python C1 (1 pod)', 'pods': 1, 'dir_pattern': 'results_fibonacci_python_c1', 'telemetry_file': 'fibonacci_python_c1_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c1_detailed_analysis.csv'},
                 {'name': 'Python C2 (2 pods)', 'pods': 2, 'dir_pattern': 'results_fibonacci_python_c2', 'telemetry_file': 'fibonacci_python_c2_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c2_detailed_analysis.csv'},
                 {'name': 'Python C3 (4 pods)', 'pods': 4, 'dir_pattern': 'results_fibonacci_python_c3', 'telemetry_file': 'fibonacci_python_c3_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c3_detailed_analysis.csv'},
-                {'name': 'Python C4 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_python_c4', 'telemetry_file': 'fibonacci_python_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c4_detailed_analysis.csv'},
-                {'name': 'Python C5 (10 pods)', 'pods': 10, 'dir_pattern': 'results_fibonacci_python_c5', 'telemetry_file': 'fibonacci_python_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c5_detailed_analysis.csv'},
+                {'name': 'Python C4 (7 pods)', 'pods': 7, 'dir_pattern': 'results_fibonacci_python_c4', 'telemetry_file': 'fibonacci_python_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c4_detailed_analysis.csv'},
+                {'name': 'Python C5 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_python_c5', 'telemetry_file': 'fibonacci_python_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_python_c5_detailed_analysis.csv'},
                 {'name': 'NodeJS C1 (1 pod)', 'pods': 1, 'dir_pattern': 'results_fibonacci_nodejs_c1', 'telemetry_file': 'fibonacci_nodejs_c1_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c1_detailed_analysis.csv'},
                 {'name': 'NodeJS C2 (2 pods)', 'pods': 2, 'dir_pattern': 'results_fibonacci_nodejs_c2', 'telemetry_file': 'fibonacci_nodejs_c2_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c2_detailed_analysis.csv'},
                 {'name': 'NodeJS C3 (4 pods)', 'pods': 4, 'dir_pattern': 'results_fibonacci_nodejs_c3', 'telemetry_file': 'fibonacci_nodejs_c3_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c3_detailed_analysis.csv'},
-                {'name': 'NodeJS C4 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_nodejs_c4', 'telemetry_file': 'fibonacci_nodejs_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c4_detailed_analysis.csv'},
-                {'name': 'NodeJS C5 (10 pods)', 'pods': 10, 'dir_pattern': 'results_fibonacci_nodejs_c5', 'telemetry_file': 'fibonacci_nodejs_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c5_detailed_analysis.csv'},
+                {'name': 'NodeJS C4 (7 pods)', 'pods': 7, 'dir_pattern': 'results_fibonacci_nodejs_c4', 'telemetry_file': 'fibonacci_nodejs_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c4_detailed_analysis.csv'},
+                {'name': 'NodeJS C5 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_nodejs_c5', 'telemetry_file': 'fibonacci_nodejs_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_nodejs_c5_detailed_analysis.csv'},
                 {'name': 'Go C1 (1 pod)', 'pods': 1, 'dir_pattern': 'results_fibonacci_go_c1', 'telemetry_file': 'fibonacci_go_c1_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c1_detailed_analysis.csv'},
                 {'name': 'Go C2 (2 pods)', 'pods': 2, 'dir_pattern': 'results_fibonacci_go_c2', 'telemetry_file': 'fibonacci_go_c2_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c2_detailed_analysis.csv'},
                 {'name': 'Go C3 (4 pods)', 'pods': 4, 'dir_pattern': 'results_fibonacci_go_c3', 'telemetry_file': 'fibonacci_go_c3_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c3_detailed_analysis.csv'},
-                {'name': 'Go C4 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_go_c4', 'telemetry_file': 'fibonacci_go_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c4_detailed_analysis.csv'},
-                {'name': 'Go C5 (10 pods)', 'pods': 10, 'dir_pattern': 'results_fibonacci_go_c5', 'telemetry_file': 'fibonacci_go_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c5_detailed_analysis.csv'}
+                {'name': 'Go C4 (7 pods)', 'pods': 7, 'dir_pattern': 'results_fibonacci_go_c4', 'telemetry_file': 'fibonacci_go_c4_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c4_detailed_analysis.csv'},
+                {'name': 'Go C5 (8 pods)', 'pods': 8, 'dir_pattern': 'results_fibonacci_go_c5', 'telemetry_file': 'fibonacci_go_c5_pod_monitoring.csv', 'perf_file': 'fibonacci_go_c5_detailed_analysis.csv'}
             ]
         else:
             raise ValueError(f"Unsupported series type: {series_type}. Use 'A', 'B', or 'C'")

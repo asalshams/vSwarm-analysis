@@ -451,6 +451,83 @@ class ASeriesVisualizer:
                         print(f"Warning: {summary_file} not found")
         
         return pd.DataFrame(max_data)
+    
+    def create_summary_table(self, all_runtime_data: Dict[str, pd.DataFrame], output_dir: str):
+        """Create summary table for A series with descriptive comments."""
+        print("    Creating A series summary table...")
+        
+        summary_data = []
+        
+        # Need to go back to original directories to read "Avg of Max" from summary files
+        a_series_dirs = self.find_a_series_directories()
+        
+        for runtime in ["go", "nodejs", "python"]:
+            if runtime in a_series_dirs and a_series_dirs[runtime]:
+                for results_dir in a_series_dirs[runtime]:
+                    # Extract run name (A1, A2, etc.)
+                    run_name = os.path.basename(results_dir).split('_')[-1].upper()
+                    
+                    # Read the "Avg of Max" from achieved_rps_summary.csv
+                    summary_file = os.path.join(results_dir, 'achieved_rps_summary.csv')
+                    if os.path.exists(summary_file):
+                        try:
+                            with open(summary_file, 'r') as f:
+                                lines = f.readlines()
+                            
+                            # Look for "Avg of Max" line
+                            avg_of_max = None
+                            for line in lines:
+                                if line.startswith('Avg of Max'):
+                                    parts = line.strip().split(',')
+                                    if len(parts) >= 2:
+                                        avg_of_max = float(parts[1])
+                                        break
+                            
+                            if avg_of_max is not None:
+                                config = RUN_CONFIG[run_name]
+                                summary_data.append({
+                                    'Configuration': run_name,
+                                    'Pods': int(config['pods']),
+                                    'CPU_per_Pod': config['container_cpu'],
+                                    'Memory_per_Pod': config['container_mem'],
+                                    'Max_Throughput_RPS': f"{avg_of_max:.1f}",
+                                    'Avg_Latency_ms': "N/A",  # A series doesn't have detailed latency data in summary
+                                    'P95_Latency_ms': "N/A",
+                                    'P99_Latency_ms': "N/A"
+                                })
+                            else:
+                                print(f"Warning: Could not find 'Avg of Max' in {summary_file}")
+                                
+                        except Exception as e:
+                            print(f"Error reading {summary_file}: {e}")
+                    else:
+                        print(f"Warning: {summary_file} not found")
+        
+        if summary_data:
+            summary_df = pd.DataFrame(summary_data)
+            
+            # Create summary CSV with descriptive comments
+            summary_file = os.path.join(output_dir, "a_series_summary.csv")
+            with open(summary_file, 'w') as f:
+                # Write descriptive comments
+                f.write("# A-Series Performance Summary Table\n")
+                f.write("# ===================================\n")
+                f.write("# \n")
+                f.write("# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations\n")
+                f.write("#                   (more conservative metric than single peak performance)\n")
+                f.write("# \n")
+                f.write("# Latency metrics: Not available in A-series summary (use detailed analysis files)\n")
+                f.write("# \n")
+                f.write("# Configuration: A1 (1000m CPU, 1Gi memory) to A5 (100m CPU, 100Mi memory)\n")
+                f.write("# All configurations use containerConcurrency=1 (single-threaded)\n")
+                f.write("# \n")
+                
+                # Write the actual data
+                summary_df.to_csv(f, index=False)
+            
+            print(f"    Saved: a_series_summary.csv")
+        else:
+            print("    Warning: No summary data available")
 
     def create_maximum_throughput_comparison(self, max_data: pd.DataFrame):
         """Create maximum throughput comparison by configuration."""
@@ -894,10 +971,44 @@ class ASeriesVisualizer:
             grouped['run_order'] = grouped['run'].map({'A1': 1, 'A2': 2, 'A3': 3, 'A4': 4, 'A5': 5})
             grouped = grouped.sort_values(['run_order', 'target_rps']).drop('run_order', axis=1)
             
-            # Save aggregated CSV
+            # Save aggregated CSV with descriptive comments
             filename = f"fibonacci_{runtime}_a_aggregated.csv"
             output_path = os.path.join(runtime_dir, filename)
-            grouped.to_csv(output_path, index=False)
+            
+            with open(output_path, 'w') as f:
+                # Write descriptive comments
+                f.write(f"# {runtime.title()}-Series Aggregated Performance Data\n")
+                f.write("# ===============================================\n")
+                f.write("# \n")
+                f.write("# This file contains aggregated performance metrics averaged across iterations\n")
+                f.write("# for each configuration (A1-A5) and target RPS level.\n")
+                f.write("# \n")
+                f.write("# Columns Description:\n")
+                f.write("# - run: Configuration (A1, A2, A3, A4, A5)\n")
+                f.write("# - pods: Number of pods (always 1 for A-series)\n")
+                f.write("# - container_cpu: CPU allocation per pod\n")
+                f.write("# - container_mem: Memory allocation per pod\n")
+                f.write("# - target_conc: Container concurrency (always 1 for A-series)\n")
+                f.write("# - target_rps: Requested RPS for the test\n")
+                f.write("# - throughput_rps: Actual throughput achieved (average across iterations)\n")
+                f.write("# - actual_rps: Same as throughput_rps (for compatibility)\n")
+                f.write("# - total_requests: Total requests processed (average across iterations)\n")
+                f.write("# - average/median/p95/p99: Latency percentiles in microseconds\n")
+                f.write("# - *_ms: Same latency metrics converted to milliseconds\n")
+                f.write("# \n")
+                f.write("# A-Series Configuration:\n")
+                f.write("# - A1: 1000m CPU, 1Gi memory (highest resources)\n")
+                f.write("# - A2: 500m CPU, 500Mi memory\n")
+                f.write("# - A3: 250m CPU, 250Mi memory\n")
+                f.write("# - A4: 125m CPU, 125Mi memory\n")
+                f.write("# - A5: 100m CPU, 100Mi memory (lowest resources)\n")
+                f.write("# \n")
+                f.write("# All A-series tests use containerConcurrency=1 (single-threaded)\n")
+                f.write("# to analyze single-threading performance limits.\n")
+                f.write("# \n")
+                
+                # Write the actual data
+                grouped.to_csv(f, index=False)
             
             print(f"      Saved: {filename}")
             

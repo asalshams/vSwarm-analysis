@@ -1,0 +1,20 @@
+# Python-Series Performance Summary Table
+# ===============================================
+# 
+# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations
+#                   (more conservative metric than single peak performance)
+# 
+# Latency metrics: Average latency across iterations at the RPS level where
+#                 the highest actual RPS was achieved (represents realistic
+#                 performance under peak load conditions)
+# 
+# Configuration: C1 (1 pod, 2000m CPU) to C5 (8 pods, 200m CPU each)
+# C1-C3 maintain constant total resources (2000m CPU, 2Gi memory); C4-C5 use fewer total resources
+# but vary pod count and containerConcurrency for scaling analysis
+# 
+Configuration,Pods,CPU_per_Pod,Memory_per_Pod,containerConcurrency,Max_Throughput_RPS,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
+C1,1,2000m,2Gi,200,108.5,3904.07,7285.42,7839.50
+C2,2,1000m,1Gi,100,202.7,4498.39,8308.32,8999.53
+C3,4,500m,500Mi,50,394.9,2006.39,3296.91,4366.33
+C4,7,250m,250Mi,25,430.1,127.58,340.54,558.95
+C5,8,200m,200Mi,20,425.2,111.60,300.57,527.97

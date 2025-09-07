@@ -1,0 +1,247 @@
+=== Deployment Configuration ===
+Timestamp: 2025-09-07T13:21:21+01:00
+Title: fibonacci_python_c5
+Service: fibonacci-python-c5
+Namespace: constrained-tests-c5
+Expected Pods: 8
+Actual Pods: 8
+
+=== Knative Service Details ===
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{},"name":"fibonacci-python-c5","namespace":"constrained-tests-c5"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/maxScale":"10","autoscaling.knative.dev/minScale":"10","autoscaling.knative.dev/target":"20","serving.knative.dev/containerConcurrency":"20"}},"spec":{"containerConcurrency":20,"containers":[{"args":["--addr=0.0.0.0:50000","--function-endpoint-url=0.0.0.0","--function-endpoint-port=50051","--function-name=fibonacci-python","--value=10","--generator=linear","--lowerBound=1","--upperBound=10"],"image":"docker.io/vhiveease/relay:latest","name":"relay","ports":[{"containerPort":50000,"name":"h2c"}],"resources":{"limits":{"cpu":"30m","memory":"64Mi"},"requests":{"cpu":"30m","memory":"64Mi"}}},{"args":["-addr=0.0.0.0:50051"],"image":"docker.io/vhiveease/fibonacci-python:latest","name":"fibonacci-python","resources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"200m","memory":"200Mi"}}}],"timeoutSeconds":60}}}}
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  creationTimestamp: "2025-09-07T12:12:55Z"
+  generation: 2
+  name: fibonacci-python-c5
+  namespace: constrained-tests-c5
+  resourceVersion: "30817974"
+  uid: b0eca4b9-3267-46bc-a0ac-2e219f15169b
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "8"
+        autoscaling.knative.dev/minScale: "8"
+        autoscaling.knative.dev/target: "20"
+        serving.knative.dev/containerConcurrency: "20"
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 20
+      containers:
+      - args:
+        - --addr=0.0.0.0:50000
+        - --function-endpoint-url=0.0.0.0
+        - --function-endpoint-port=50051
+        - --function-name=fibonacci-python
+        - --value=10
+        - --generator=linear
+        - --lowerBound=1
+        - --upperBound=10
+        image: docker.io/vhiveease/relay:latest
+        name: relay
+        ports:
+        - containerPort: 50000
+          name: h2c
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 30m
+            memory: 64Mi
+          requests:
+            cpu: 30m
+            memory: 64Mi
+      - args:
+        - -addr=0.0.0.0:50051
+        image: docker.io/vhiveease/fibonacci-python:latest
+        name: fibonacci-python
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 200m
+            memory: 200Mi
+      enableServiceLinks: false
+      timeoutSeconds: 60
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://fibonacci-python-c5.constrained-tests-c5.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-09-07T12:20:37Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-09-07T12:20:38Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-09-07T12:20:38Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: fibonacci-python-c5-00002
+  latestReadyRevisionName: fibonacci-python-c5-00002
+  observedGeneration: 2
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: fibonacci-python-c5-00002
+  url: http://fibonacci-python-c5.constrained-tests-c5.192.168.1.240.sslip.io
+
+=== Current Pods ===
+NAME                                                   READY   STATUS    RESTARTS   AGE     IP               NODE             NOMINATED NODE   READINESS GATES
+fibonacci-python-c5-00002-deployment-99697fd85-25f5m   3/3     Running   0          44s     192.168.64.238   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-5mld8   3/3     Running   0          44s     192.168.64.250   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-96pzv   3/3     Running   0          2m48s   192.168.64.230   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-h7q4g   3/3     Running   0          2m48s   192.168.64.226   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-j74s7   3/3     Running   0          44s     192.168.64.242   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-pczj9   3/3     Running   0          101s    192.168.64.206   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-tr2d9   3/3     Running   0          106s    192.168.64.225   cloud-vm-43-24   <none>           <none>
+fibonacci-python-c5-00002-deployment-99697fd85-x888h   3/3     Running   0          44s     192.168.64.209   cloud-vm-43-24   <none>           <none>
+
+=== Resource Limits/Requests ===
+fibonacci-python-c5-00002-deployment-99697fd85-25f5m
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-5mld8
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-96pzv
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-h7q4g
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-j74s7
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-pczj9
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-tr2d9
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+
+fibonacci-python-c5-00002-deployment-99697fd85-x888h
+  Container: relay
+  CPU Request: 30m
+  CPU Limit: 30m
+  Memory Request: 64Mi
+  Memory Limit: 64Mi
+  Container: fibonacci-python
+  CPU Request: 200m
+  CPU Limit: 200m
+  Memory Request: 200Mi
+  Memory Limit: 200Mi
+  Container: queue-proxy
+  CPU Request: 100m
+  CPU Limit: 100m
+  Memory Request: 50Mi
+  Memory Limit: 100Mi
+

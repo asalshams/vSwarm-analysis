@@ -1,6 +1,20 @@
-Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Target_RPS_at_Max,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
-B1,1,1000m,1Gi,109.8,140,4971.63,8277.39,8704.72
-B2,2,500m,500Mi,199.8,220,5134.76,9790.46,10242.94
-B3,4,250m,250Mi,388.6,380,3442.20,6449.33,7003.04
-B4,8,125m,125Mi,428.8,340,90.55,249.83,440.18
-B5,10,100m,100Mi,424.6,420,71.17,191.50,376.41
+# Nodejs-Series Performance Summary Table
+# ===============================================
+# 
+# Max_Throughput_RPS: Average of maximum RPS achieved across all iterations
+#                   (more conservative metric than single peak performance)
+# 
+# Latency metrics: Average latency across iterations at the RPS level where
+#                 the highest actual RPS was achieved (represents realistic
+#                 performance under peak load conditions)
+# 
+# Configuration: B1 (1 pod, 1000m CPU) to B5 (10 pods, 100m CPU each)
+# All configurations maintain constant total resources (1000m CPU, 1Gi memory)
+# but vary pod count and containerConcurrency for scaling analysis
+# 
+Configuration,Pods,CPU_per_Pod,Memory_per_Pod,Max_Throughput_RPS,Avg_Latency_ms,P95_Latency_ms,P99_Latency_ms
+B1,1,1000m,1Gi,107.4,4971.63,8277.39,8704.72
+B2,2,500m,500Mi,198.4,5134.76,9790.46,10242.94
+B3,4,250m,250Mi,387.6,3442.20,6449.33,7003.04
+B4,8,125m,125Mi,427.3,90.55,249.83,440.18
+B5,10,100m,100Mi,424.2,72.73,197.93,387.74
