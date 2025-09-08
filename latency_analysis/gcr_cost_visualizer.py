@@ -221,7 +221,7 @@ class GCRCostVisualizer:
             'Avg CPU (m)': results_df['avg_cpu'].round(1),
             'Avg Memory (MiB)': results_df['avg_memory'].round(1),
             'Total Requests': results_df['total_requests'].astype(int),
-            'Max Achieved RPS': results_df['max_achieved_rps'].round(1) if 'max_achieved_rps' in results_df.columns else 'N/A',
+            'Avg of Max RPS': results_df['avg_of_max_rps'].round(1) if 'avg_of_max_rps' in results_df.columns else 'N/A',
             'Compute Cost': results_df['compute_cost'].apply(lambda x: f"${x:.6f}"),
             'Request Cost': results_df['request_cost'].apply(lambda x: f"${x:.6f}"),
             'Total Cost': results_df['total_cost'].apply(lambda x: f"${x:.6f}"),

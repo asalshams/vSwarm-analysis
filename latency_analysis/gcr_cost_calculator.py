@@ -100,11 +100,41 @@ class GCRCostCalculator:
             df = pd.read_csv(filepath)
             total_requests = df['total_requests'].sum()
             
-            # Add RPS calculation - using throughput_rps (achieved RPS) from performance files
-            max_achieved_rps = df['throughput_rps'].max() if 'throughput_rps' in df.columns else None
+            # Get the "Avg of Max" from achieved_rps_summary.csv file
+            # The performance file is in the same directory as the summary file
+            results_dir = os.path.dirname(filepath)
+            summary_file = os.path.join(results_dir, 'achieved_rps_summary.csv')
+            
+            avg_of_max_rps = None
+            if os.path.exists(summary_file):
+                try:
+                    with open(summary_file, 'r') as f:
+                        lines = f.readlines()
+                    
+                    # Look for "Avg of Max" line
+                    for line in lines:
+                        if line.startswith('Avg of Max'):
+                            parts = line.strip().split(',')
+                            if len(parts) >= 2:
+                                avg_of_max_rps = float(parts[1])
+                                break
+                except Exception as e:
+                    print(f"Error reading summary file {summary_file}: {e}")
+            else:
+                pass
+            
+            # Fallback: calculate from performance data if summary not available
+            if avg_of_max_rps is None:
+                if 'throughput_rps' in df.columns:
+                    # Group by target_rps and get max achieved RPS for each target
+                    max_per_target = df.groupby('target_rps')['throughput_rps'].max()
+                    avg_of_max_rps = max_per_target.mean()  # Average of the maximums
+                else:
+                    avg_of_max_rps = None
+            
             avg_achieved_rps = df['throughput_rps'].mean() if 'throughput_rps' in df.columns else None
             
-            return int(total_requests), max_achieved_rps, avg_achieved_rps
+            return int(total_requests), avg_of_max_rps, avg_achieved_rps
         except Exception as e:
             print(f"Error parsing performance file {filepath}: {e}")
             return 0, None, None
@@ -127,7 +157,7 @@ class GCRCostCalculator:
         cpu_cost, memory_cost, total_compute_cost, stats = self.calculate_telemetry_costs(df)
         
         # Parse request data
-        total_requests, max_achieved_rps, avg_achieved_rps = self.parse_performance_file_extended(performance_file)
+        total_requests, avg_of_max_rps, avg_achieved_rps = self.parse_performance_file_extended(performance_file)
         request_cost = self.calculate_request_costs(total_requests)
         
         # Calculate total cost
@@ -175,9 +205,9 @@ class GCRCostCalculator:
             'memory_cost': memory_cost,
             'compute_cost': total_compute_cost,
             'total_requests': total_requests,
-            'max_achieved_rps': max_achieved_rps,
+            'avg_of_max_rps': avg_of_max_rps,
             'avg_achieved_rps': avg_achieved_rps,
-            'cost_per_rps': total_cost / max_achieved_rps if max_achieved_rps and max_achieved_rps > 0 else None,
+            'cost_per_rps': total_cost / avg_of_max_rps if avg_of_max_rps and avg_of_max_rps > 0 else None,
             'request_cost': request_cost,
             'total_cost': total_cost,
             'compute_percentage': (total_compute_cost/total_cost*100),
