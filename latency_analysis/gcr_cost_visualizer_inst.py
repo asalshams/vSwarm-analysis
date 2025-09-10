@@ -234,7 +234,7 @@ class GCRInstanceCostVisualizer:
     def create_cost_summary_table(self, results_df, series_type="B", save_path=None):
         """Create a formatted summary table for instance-based billing"""
         # Prepare data for table - remove pod info from config names and shorten column names
-        config_names = results_df['config'].str.replace(r' \(\d+ pod\)', '', regex=True)
+        config_names = results_df['config'].str.replace(r' \(\d+ pods?\)', '', regex=True)
         summary_data = {
             'Config': config_names,
             'Pods': results_df['pods'].astype(int),
