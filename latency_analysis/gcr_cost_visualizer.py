@@ -17,27 +17,27 @@ class GCRCostVisualizer:
     def plot_cost_comparison(self, results_df, series_type="B", save_path=None):
         """Create comprehensive cost comparison charts"""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle(f'Google Cloud Run {series_type.upper()}-Series Cost Analysis', fontsize=16, fontweight='bold')
+        fig.suptitle(f'Google Cloud Run {series_type.upper()}-Series Request-Based Cost Analysis', fontsize=16, fontweight='bold')
         
         # 1. Total Cost by Configuration
-        ax1.bar(results_df['config'], results_df['total_cost'], 
+        bars1 = ax1.bar(results_df['config'], results_df['total_cost'], 
                 color=self.colors[:len(results_df)], alpha=0.8)
         ax1.set_title('Total Cost by Configuration')
         ax1.set_ylabel('Cost (USD)')
         ax1.tick_params(axis='x', rotation=45)
         
         # Add value labels on bars
-        for i, v in enumerate(results_df['total_cost']):
-            ax1.text(i, v + max(results_df['total_cost']) * 0.01, f'${v:.6f}', 
-                    ha='center', va='bottom', fontweight='bold')
+        for i, (bar, v) in enumerate(zip(bars1, results_df['total_cost'])):
+            ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(results_df['total_cost']) * 0.05, 
+                    f'${v:.6f}', ha='center', va='bottom', fontweight='bold', fontsize=9)
         
         # 2. Cost Breakdown (Compute vs Requests)
         width = 0.35
         x = np.arange(len(results_df))
         
-        ax2.bar(x, results_df['compute_cost'], width, label='Compute Cost', 
+        bars2a = ax2.bar(x, results_df['compute_cost'], width, label='Compute Cost', 
                 color='lightblue', alpha=0.8)
-        ax2.bar(x, results_df['request_cost'], width, bottom=results_df['compute_cost'],
+        bars2b = ax2.bar(x, results_df['request_cost'], width, bottom=results_df['compute_cost'],
                 label='Request Cost', color='lightcoral', alpha=0.8)
         
         ax2.set_title('Cost Breakdown: Compute vs Requests')
@@ -84,35 +84,45 @@ class GCRCostVisualizer:
         
     def plot_simple_cost_comparison(self, results_df, series_type="B", save_path=None):
         """Create simplified cost comparison charts (Total Cost + Cost Breakdown only)"""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-        fig.suptitle(f'Google Cloud Run {series_type.upper()}-Series Simple Cost Analysis', fontsize=16, fontweight='bold')
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+        fig.suptitle(f'Google Cloud Run {series_type.upper()}-Series Request-Based Simple Cost Analysis', fontsize=16, fontweight='bold')
+        
+        # Clean config names by removing pod info for cleaner display
+        clean_configs = [config.split(' (')[0] for config in results_df['config']]
         
         # 1. Total Cost by Configuration
-        ax1.bar(results_df['config'], results_df['total_cost'], 
-                color=self.colors[:len(results_df)], alpha=0.8)
-        ax1.set_title('Total Cost by Configuration')
-        ax1.set_ylabel('Cost (USD)')
-        ax1.tick_params(axis='x', rotation=45)
+        x1 = np.arange(len(results_df))
+        bars1 = ax1.bar(x1, results_df['total_cost'], 
+                color=self.colors[:len(results_df)], alpha=0.8, width=0.7)
+        ax1.set_title('Total Cost by Configuration', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Cost (USD)', fontsize=12)
+        ax1.set_xticks(x1)
+        ax1.set_xticklabels(clean_configs, rotation=45, ha='right', fontsize=10)
         
-        # Add value labels on bars
-        for i, v in enumerate(results_df['total_cost']):
-            ax1.text(i, v + max(results_df['total_cost']) * 0.01, f'${v:.6f}', 
-                    ha='center', va='bottom', fontweight='bold')
+        # Set y-axis limit
+        max_cost = max(results_df['total_cost'])
+        ax1.set_ylim(0, max_cost * 1.1)
+        ax1.grid(True, alpha=0.3, axis='y')
         
         # 2. Cost Breakdown (Compute vs Requests)
-        width = 0.35
-        x = np.arange(len(results_df))
+        x2 = np.arange(len(results_df))
+        width = 0.7
         
-        ax2.bar(x, results_df['compute_cost'], width, label='Compute Cost', 
+        bars2a = ax2.bar(x2, results_df['compute_cost'], width, label='Compute Cost', 
                 color='lightblue', alpha=0.8)
-        ax2.bar(x, results_df['request_cost'], width, bottom=results_df['compute_cost'],
+        bars2b = ax2.bar(x2, results_df['request_cost'], width, bottom=results_df['compute_cost'],
                 label='Request Cost', color='lightcoral', alpha=0.8)
         
-        ax2.set_title('Cost Breakdown: Compute vs Requests')
-        ax2.set_ylabel('Cost (USD)')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(results_df['config'], rotation=45)
-        ax2.legend()
+        ax2.set_title('Cost Breakdown: Compute vs Requests', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Cost (USD)', fontsize=12)
+        ax2.set_xticks(x2)
+        ax2.set_xticklabels(clean_configs, rotation=45, ha='right', fontsize=10)
+        ax2.legend(fontsize=10)
+        ax2.grid(True, alpha=0.3, axis='y')
+        
+        # Set y-axis limit
+        max_total = max(results_df['total_cost'])
+        ax2.set_ylim(0, max_total * 1.1)
         
         plt.tight_layout()
         
@@ -165,7 +175,7 @@ class GCRCostVisualizer:
     def plot_cost_efficiency_analysis(self, results_df, series_type="B", save_path=None):
         """Create detailed cost efficiency analysis"""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle(f'{series_type.upper()}-Series Cost Efficiency Analysis', fontsize=16, fontweight='bold')
+        fig.suptitle(f'{series_type.upper()}-Series Request-Based Cost Efficiency Analysis', fontsize=16, fontweight='bold')
         
         # 1. Cost per Request
         cost_per_request = results_df['total_cost'] / results_df['total_requests'] * 1000000  # Cost per million requests
@@ -214,19 +224,20 @@ class GCRCostVisualizer:
         
     def create_cost_summary_table(self, results_df, series_type="B", save_path=None):
         """Create a formatted summary table"""
-        # Prepare data for table
+        # Prepare data for table - remove pod info from config names and shorten column names
+        config_names = results_df['config'].str.replace(r' \(\d+ pod\)', '', regex=True)
         summary_data = {
-            'Configuration': results_df['config'],
+            'Config': config_names,
             'Pods': results_df['pods'].astype(int),
-            'Avg CPU (m)': results_df['avg_cpu'].round(1),
-            'Avg Memory (MiB)': results_df['avg_memory'].round(1),
-            'Total Requests': results_df['total_requests'].astype(int),
-            'Avg of Max RPS': results_df['avg_of_max_rps'].round(1) if 'avg_of_max_rps' in results_df.columns else 'N/A',
-            'Compute Cost': results_df['compute_cost'].apply(lambda x: f"${x:.6f}"),
-            'Request Cost': results_df['request_cost'].apply(lambda x: f"${x:.6f}"),
-            'Total Cost': results_df['total_cost'].apply(lambda x: f"${x:.6f}"),
-            'Cost/Million Req': (results_df['total_cost'] / results_df['total_requests'] * 1000000).apply(lambda x: f"${x:.2f}"),
-            'Cost/Achieved RPS': results_df['cost_per_rps'].apply(lambda x: f"${x:.6f}" if pd.notna(x) else 'N/A')
+            'CPU (m)': results_df['avg_cpu'].round(1),
+            'Memory (MiB)': results_df['avg_memory'].round(1),
+            'Requests': results_df['total_requests'].astype(int),
+            'Max RPS': results_df['avg_of_max_rps'].round(1) if 'avg_of_max_rps' in results_df.columns else 'N/A',
+            'Compute $': results_df['compute_cost'].apply(lambda x: f"${x:.4f}"),
+            'Request $': results_df['request_cost'].apply(lambda x: f"${x:.4f}"),
+            'Total $': results_df['total_cost'].apply(lambda x: f"${x:.4f}"),
+            '$/M Req': (results_df['total_cost'] / results_df['total_requests'] * 1000000).apply(lambda x: f"${x:.2f}"),
+            '$/RPS': results_df['cost_per_rps'].apply(lambda x: f"${x:.4f}" if pd.notna(x) else 'N/A')
         }
         
         summary_df = pd.DataFrame(summary_data)
@@ -243,8 +254,8 @@ class GCRCostVisualizer:
                         bbox=[0, 0, 1, 1])
         
         table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1.2, 2)
+        table.set_fontsize(9)
+        table.scale(1.0, 1.8)
         
         # Style the table
         for i in range(len(summary_df.columns)):
@@ -257,7 +268,7 @@ class GCRCostVisualizer:
                 if i % 2 == 0:
                     table[(i, j)].set_facecolor('#f0f0f0')
         
-        plt.title(f'{series_type.upper()}-Series Cost Analysis Summary', fontsize=16, fontweight='bold', pad=20)
+        plt.title(f'{series_type.upper()}-Series Request-Based Cost Analysis Summary', fontsize=16, fontweight='bold', pad=20)
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -377,7 +388,7 @@ if __name__ == "__main__":
     # Import the cost calculator (assuming it's in the same directory)
     from gcr_cost_calculator import GCRCostCalculator
     
-    parser = argparse.ArgumentParser(description='GCR Cost Visualizer for A, B, and C Series')
+    parser = argparse.ArgumentParser(description='GCR Request-Based Cost Visualizer for A, B, and C Series')
     parser.add_argument('--series', '-s', choices=['A', 'B', 'C'], default='B',
                        help='Series type to analyze (A, B, or C). Default: B')
     parser.add_argument('--data-dir', '-d', default='.',
@@ -402,7 +413,7 @@ if __name__ == "__main__":
     else:
         output_dir = f"{args.series.lower()}_series_gcr_costs"
     
-    print(f"Generating visualizations for {args.series}-series configurations...")
+    print(f"Generating request-based visualizations for {args.series}-series configurations...")
     print(f"Data directory: {data_directory}")
     print(f"Output directory: {output_dir}")
     print("-" * 60)

@@ -538,6 +538,7 @@ class ASeriesVisualizer:
             return
         
         fig, ax = plt.subplots(figsize=(14, 8))
+        fig.subplots_adjust(top=0.85)
         
         # Set up grouped bar chart
         runs = ["A1", "A2", "A3", "A4", "A5"]
@@ -571,7 +572,7 @@ class ASeriesVisualizer:
         ax.set_xlabel('Configuration', fontsize=12, fontweight='bold')
         ax.set_ylabel('Maximum Achieved Throughput (RPS)', fontsize=12, fontweight='bold')
         ax.set_title('A-Series Maximum Throughput by Configuration\nResource Scaling Analysis (containerConcurrency=1)', 
-                    fontsize=14, fontweight='bold', pad=20)
+                    fontsize=14, fontweight='bold', pad=60, y=1.02)
         
         # Add configuration details
         config_labels = []
@@ -581,10 +582,10 @@ class ASeriesVisualizer:
         
         ax.set_xticks(x + width)
         ax.set_xticklabels(config_labels, fontsize=10)
-        ax.legend(fontsize=11)
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=11)
         ax.grid(True, alpha=0.3, axis='y')
         
-        plt.tight_layout()
+        plt.tight_layout(pad=3.0)
         
         filename = "a_series_max_throughput_comparison.png"
         self._save_chart(filename, fig)
